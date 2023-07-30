@@ -122,7 +122,16 @@ func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manif
 	return fileHashes, nil
 }
 
-func Download(beta bool, dir string, pythonPath string, manifest string, mountsWorker int) error {
+func contains(arr []string, str string) bool {
+	for _, s := range arr {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+func Download(beta bool, dir string, pythonPath string, manifest string, mountsWorker int, ignore []string) error {
 	CleanUp(dir)
 	CreateDataDirectoryStructure(dir)
 
@@ -185,38 +194,45 @@ func Download(beta bool, dir string, pythonPath string, manifest string, mountsW
 	}
 
 	var waitGrp sync.WaitGroup
+	if !contains(ignore, "languages") {
+		waitGrp.Add(1)
+		go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
+			defer waitGrp.Done()
+			if err := DownloadLanguages(manifest, dir, pythonPath); err != nil {
+				log.Fatal(err)
+			}
+		}(&ankaManifest, dir, pythonPath)
+	}
 
-	waitGrp.Add(1)
-	go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
-		defer waitGrp.Done()
-		if err := DownloadLanguages(manifest, dir, pythonPath); err != nil {
-			log.Fatal(err)
-		}
-	}(&ankaManifest, dir, pythonPath)
+	if !contains(ignore, "images") {
+		waitGrp.Add(1)
+		go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
+			defer waitGrp.Done()
+			if err := DownloadImagesLauncher(manifest, dir, pythonPath); err != nil {
+				log.Fatal(err)
+			}
+		}(&ankaManifest, dir, pythonPath)
+	}
 
-	waitGrp.Add(1)
-	go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
-		defer waitGrp.Done()
-		if err := DownloadImagesLauncher(manifest, dir, pythonPath); err != nil {
-			log.Fatal(err)
-		}
-	}(&ankaManifest, dir, pythonPath)
-
-	waitGrp.Add(1)
-	go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
-		defer waitGrp.Done()
-		if err := DownloadItems(manifest, dir, pythonPath); err != nil {
-			log.Fatal(err)
-		}
-	}(&ankaManifest, dir, pythonPath)
+	if !contains(ignore, "items") {
+		waitGrp.Add(1)
+		go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
+			defer waitGrp.Done()
+			if err := DownloadItems(manifest, dir, pythonPath); err != nil {
+				log.Fatal(err)
+			}
+		}(&ankaManifest, dir, pythonPath)
+	}
 
 	waitGrp.Wait()
 
-	log.Info("Parsing for missing mount images...")
-	gamedata := ParseRawData(dir)
-	log.Info("Downloading mount images...")
-	DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, pythonPath)
-	log.Info("... mount images downloaded")
+	if !contains(ignore, "mountsimages") {
+		log.Info("Parsing for missing mount images...")
+		gamedata := ParseRawData(dir)
+		log.Info("Downloading mount images...")
+		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, pythonPath)
+		log.Info("... mount images downloaded")
+	}
 
 	os.RemoveAll(fmt.Sprintf("%s/data/tmp", dir))
 

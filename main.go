@@ -37,6 +37,7 @@ func main() {
 	rootCmd.PersistentFlags().StringP("python", "p", "/usr/bin/python3", "Python path with all installed packages for PyDofus")
 	rootCmd.PersistentFlags().StringP("manifest", "m", "", "Manifest file path. Empty will download it if it is not found.")
 	rootCmd.PersistentFlags().IntP("workers", "w", 2, "Number of workers to use for downloading")
+	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore steps [mounts]")
 
 	parseCmd.Flags().BoolP("indent", "i", false, "Indent the JSON output (increases file size)")
 	rootCmd.AddCommand(parseCmd)
@@ -137,12 +138,17 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
+	ignore, err := ccmd.Flags().GetStringArray("ignore")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	fmt.Printf("beta: %t\n", beta)
 	fmt.Printf("dir: %s\n", dir)
 	fmt.Printf("python: %s\n", pythonPath)
 	fmt.Println("")
 
-	err = Download(beta, dir, pythonPath, manifest, worker)
+	err = Download(beta, dir, pythonPath, manifest, worker, ignore)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
