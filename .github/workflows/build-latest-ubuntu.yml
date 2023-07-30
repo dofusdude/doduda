@@ -20,3 +20,12 @@ jobs:
 
     - name: Build
       run: go build -v ./...
+
+    - name: Download data for tests
+      run: |
+        mkdir -p data
+        docker pull stelzo/doduda:latest
+        docker run --rm -v $PWD/data:/app/data stelzo/doduda:latest --ignore mountsimages
+
+    - name: Test
+      run: go test
