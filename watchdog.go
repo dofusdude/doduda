@@ -17,28 +17,33 @@ type VersionFile struct {
 	Beta string `json:"beta"`
 }
 
-func VersionChanged(dir string, gameVersion string, versionFilePath string, customBodyPath string) (bool, string, string, error) { // changed?, old version, new version, error
+func VersionChanged(dir string, gameVersion string, versionFilePath string, customBodyPath string, persistence bool, initialHook *bool) (bool, string, string, error) { // changed?, old version, new version, error
 	var versionFile VersionFile
 
-	if _, err := os.Stat(versionFilePath); os.IsNotExist(err) {
-		err = os.MkdirAll(filepath.Dir(versionFilePath), 0755)
-		if err != nil {
-			return false, "", "", err
-		}
-		versionFile = VersionFile{
-			Main: "",
-			Beta: "",
+	if persistence {
+		if _, err := os.Stat(versionFilePath); os.IsNotExist(err) {
+			err = os.MkdirAll(filepath.Dir(versionFilePath), 0755)
+			if err != nil {
+				return false, "", "", err
+			}
+			versionFile = VersionFile{
+				Main: "",
+				Beta: "",
+			}
+		} else {
+			versions, err := os.ReadFile(versionFilePath)
+			if err != nil {
+				return false, "", "", err
+			}
+
+			err = json.Unmarshal(versions, &versionFile)
+			if err != nil {
+				return false, "", "", err
+			}
 		}
 	} else {
-		versions, err := os.ReadFile(versionFilePath)
-		if err != nil {
-			return false, "", "", err
-		}
-
-		err = json.Unmarshal(versions, &versionFile)
-		if err != nil {
-			return false, "", "", err
-		}
+		versionFile.Beta = "-"
+		versionFile.Main = "-"
 	}
 
 	isBeta := gameVersion == "beta"
@@ -52,6 +57,11 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 		versionChanged = versionFile.Main != serverVersion
 	}
 
+	if *initialHook {
+		*initialHook = false
+		return true, "-", serverVersion, nil
+	}
+
 	if versionChanged {
 		var oldVersion string
 		if isBeta {
@@ -62,14 +72,16 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 			versionFile.Main = serverVersion
 		}
 
-		versionsCurrent, err := json.Marshal(versionFile)
-		if err != nil {
-			return false, oldVersion, serverVersion, err
-		}
+		if persistence {
+			versionsCurrent, err := json.Marshal(versionFile)
+			if err != nil {
+				return false, oldVersion, serverVersion, err
+			}
 
-		err = os.WriteFile(versionFilePath, versionsCurrent, 0644)
-		if err != nil {
-			return false, oldVersion, serverVersion, err
+			err = os.WriteFile(versionFilePath, versionsCurrent, 0644)
+			if err != nil {
+				return false, oldVersion, serverVersion, err
+			}
 		}
 
 		if oldVersion == "" { // first time, just save the file
@@ -82,12 +94,13 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 	return false, serverVersion, serverVersion, nil
 }
 
-func SpawnWatchdog(dir string, gameRelease string, hook string, token string, versionFilePath string, customBodyPath string) *time.Ticker {
-	ticker := time.NewTicker(1 * time.Minute)
+func SpawnWatchdog(endTimer chan bool, dir string, gameRelease string, hook string, token string, versionFilePath string, customBodyPath string, persistence bool, initialHook *bool, deadlyHook bool, interval uint32) *time.Ticker {
+	ticker := time.NewTicker(time.Duration(interval) * time.Minute)
 
 	go func() {
 		for range ticker.C {
-			changed, oldVersion, newVersion, err := VersionChanged(dir, gameRelease, versionFilePath, customBodyPath)
+			changed, oldVersion, newVersion, err := VersionChanged(dir, gameRelease, versionFilePath, customBodyPath, persistence, initialHook)
+
 			if err != nil {
 				log.Error(err)
 			} else {
@@ -152,9 +165,13 @@ func SpawnWatchdog(dir string, gameRelease string, hook string, token string, ve
 					if err != nil {
 						log.Error(err)
 					} else {
-						resp.Body.Close()
+						err = resp.Body.Close()
 						if err != nil {
 							log.Error(err)
+						} else {
+							if deadlyHook {
+								endTimer <- true
+							}
 						}
 					}
 				}

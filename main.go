@@ -44,17 +44,21 @@ func main() {
 	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. [main, beta]")
 	rootCmd.PersistentFlags().StringP("dir", "d", ".", "Working directory")
 	rootCmd.PersistentFlags().StringP("python", "P", "/usr/bin/python3", "Python path with all installed packages for PyDofus")
-	rootCmd.PersistentFlags().StringP("manifest", "m", "", "Manifest file path. Empty will download it if it is not found.")
-	rootCmd.PersistentFlags().IntP("workers", "w", 2, "Number of workers to use for downloading")
-	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore steps [mounts]")
+	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
+	rootCmd.PersistentFlags().IntP("workers", "j", 2, "Number of workers to use for downloading.")
+	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore steps [mounts, languages, items, images, mountsimages].")
 
 	parseCmd.Flags().BoolP("indent", "i", false, "Indent the JSON output (increases file size)")
 	rootCmd.AddCommand(parseCmd)
 
-	watchdogCmd.Flags().StringP("hook", "H", "", "Hook to make POST request to when a change is detected.")
-	watchdogCmd.Flags().StringP("token", "t", "", "Bearer token to use for the POST request.")
-	watchdogCmd.Flags().StringP("path", "p", "", "Filepath for json version persistence. Defaults to `{dir}/version/version.json`.")
-	watchdogCmd.Flags().StringP("body", "B", "", "Filepath to a custom message body for the hook. Available variables ${release}, ${oldVersion}, ${newVersion}.")
+	watchdogCmd.Flags().StringP("hook", "H", "", "Hook URL to send a POST request to when a change is detected.")
+	watchdogCmd.Flags().String("token", "", "Bearer token to use for the POST request.")
+	watchdogCmd.Flags().String("path", "", "Filepath for json version persistence. Defaults to `{dir}/version/version.json`.")
+	watchdogCmd.Flags().String("body", "", "Filepath to a custom message body for the hook. Available variables ${release}, ${oldVersion}, ${newVersion}.")
+	watchdogCmd.Flags().Bool("inital-hook", false, "Notify immediatly after checking the version after first timer event, even at first startup.")
+	watchdogCmd.Flags().Bool("persistence", true, "Control writing the persistence file. `false` will trigger the hook every time the trigger fires.")
+	watchdogCmd.Flags().Bool("deadly-hook", false, "End process after first successful notification.")
+	watchdogCmd.Flags().Uint32("interval", 5, "Interval in minutes to check for new versions.")
 	rootCmd.AddCommand(watchdogCmd)
 
 	err := rootCmd.Execute()
@@ -123,6 +127,8 @@ func watchdogCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
+	dir = parseWd(dir)
+
 	gameRelease, err := ccmd.Flags().GetString("release")
 	if err != nil {
 		log.Fatal(err.Error())
@@ -152,13 +158,39 @@ func watchdogCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
-	_ = SpawnWatchdog(dir, gameRelease, hook, token, versionFilePath, customBodyPath)
+	deadlyHook, err := ccmd.Flags().GetBool("deadly-hook")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	initialHook, err := ccmd.Flags().GetBool("inital-hook")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	persistence, err := ccmd.Flags().GetBool("persistence")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	interval, err := ccmd.Flags().GetUint32("interval")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	if interval < 1 {
+		log.Fatal("Interval must be greater than 0")
+	}
+
+	watchdogEnd := make(chan bool)
+	timer := SpawnWatchdog(watchdogEnd, dir, gameRelease, hook, token, versionFilePath, customBodyPath, persistence, &initialHook, deadlyHook, interval)
 	log.Info("🐶 spawned")
 
-	select {}
+	<-watchdogEnd
+	timer.Stop()
+	log.Info("👋 Bye!")
 }
 
-// loading data
 func rootCommand(ccmd *cobra.Command, args []string) {
 	var err error
 
