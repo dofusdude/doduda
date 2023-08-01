@@ -23,24 +23,39 @@ var (
 
 	parseCmd = &cobra.Command{
 		Use:           "parse",
-		Short:         "parse and map the data for application ready use",
+		Short:         "Parse and map the raw data downloaded data for to be more easily consumable.",
 		Long:          ``,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Run:           parseCommand,
 	}
+
+	watchdogCmd = &cobra.Command{
+		Use:           "listen",
+		Short:         "Spawns a watchdog.",
+		Long:          `Listens to the game version API from the Ankama Launcher and notifies you when a new version is available.`,
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		Run:           watchdogCommand,
+	}
 )
 
 func main() {
-	rootCmd.PersistentFlags().BoolP("beta", "b", false, "Use beta Game version")
+	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. [main, beta]")
 	rootCmd.PersistentFlags().StringP("dir", "d", ".", "Working directory")
-	rootCmd.PersistentFlags().StringP("python", "p", "/usr/bin/python3", "Python path with all installed packages for PyDofus")
+	rootCmd.PersistentFlags().StringP("python", "P", "/usr/bin/python3", "Python path with all installed packages for PyDofus")
 	rootCmd.PersistentFlags().StringP("manifest", "m", "", "Manifest file path. Empty will download it if it is not found.")
 	rootCmd.PersistentFlags().IntP("workers", "w", 2, "Number of workers to use for downloading")
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore steps [mounts]")
 
 	parseCmd.Flags().BoolP("indent", "i", false, "Indent the JSON output (increases file size)")
 	rootCmd.AddCommand(parseCmd)
+
+	watchdogCmd.Flags().StringP("hook", "H", "", "Hook to make POST request to when a change is detected.")
+	watchdogCmd.Flags().StringP("token", "t", "", "Bearer token to use for the POST request.")
+	watchdogCmd.Flags().StringP("path", "p", "", "Filepath for json version persistence. Defaults to `{dir}/version/version.json`.")
+	watchdogCmd.Flags().StringP("body", "B", "", "Filepath to a custom message body for the hook. Available variables ${release}, ${oldVersion}, ${newVersion}.")
+	rootCmd.AddCommand(watchdogCmd)
 
 	err := rootCmd.Execute()
 	if err != nil && err.Error() != "" {
@@ -91,7 +106,6 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
-	// parse the dir to an absolute path
 	dir, err = filepath.Abs(dir)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -103,15 +117,54 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
 }
 
+func watchdogCommand(ccmd *cobra.Command, args []string) {
+	dir, err := ccmd.Flags().GetString("dir")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	gameRelease, err := ccmd.Flags().GetString("release")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	hook, err := ccmd.Flags().GetString("hook")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	token, err := ccmd.Flags().GetString("token")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	versionFilePath, err := ccmd.Flags().GetString("path")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	if versionFilePath == "" {
+		versionFilePath = filepath.Join(dir, "version", "version.json")
+	}
+
+	customBodyPath, err := ccmd.Flags().GetString("body")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_ = SpawnWatchdog(dir, gameRelease, hook, token, versionFilePath, customBodyPath)
+	log.Info("🐶 spawned")
+
+	select {}
+}
+
 // loading data
 func rootCommand(ccmd *cobra.Command, args []string) {
-	var beta bool
 	var err error
 
 	startTime := time.Now()
 
-	// get beta or set to false if not set
-	beta, err = ccmd.Flags().GetBool("beta")
+	gameRelease, err := ccmd.Flags().GetString("release")
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -143,12 +196,13 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
-	fmt.Printf("beta: %t\n", beta)
+	fmt.Printf("release: %s\n", gameRelease)
 	fmt.Printf("dir: %s\n", dir)
 	fmt.Printf("python: %s\n", pythonPath)
 	fmt.Println("")
 
-	err = Download(beta, dir, pythonPath, manifest, worker, ignore)
+	isBeta := gameRelease == "beta"
+	err = Download(isBeta, dir, pythonPath, manifest, worker, ignore)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,21 +17,33 @@ type VersionFile struct {
 	Beta string `json:"beta"`
 }
 
-func IsVersionChanged(dir string, isBeta bool) (bool, error) {
-	versionFilePath := filepath.Join(dir, "data", "version", "version.json")
-
-	versions, err := os.ReadFile(versionFilePath)
-	if err != nil {
-		return false, err
-	}
-
+func VersionChanged(dir string, gameVersion string, versionFilePath string, customBodyPath string) (bool, string, string, error) { // changed?, old version, new version, error
 	var versionFile VersionFile
-	err = json.Unmarshal(versions, &versionFile)
-	if err != nil {
-		return false, err
+
+	if _, err := os.Stat(versionFilePath); os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Dir(versionFilePath), 0755)
+		if err != nil {
+			return false, "", "", err
+		}
+		versionFile = VersionFile{
+			Main: "",
+			Beta: "",
+		}
+	} else {
+		versions, err := os.ReadFile(versionFilePath)
+		if err != nil {
+			return false, "", "", err
+		}
+
+		err = json.Unmarshal(versions, &versionFile)
+		if err != nil {
+			return false, "", "", err
+		}
 	}
 
+	isBeta := gameVersion == "beta"
 	serverVersion := GetLatestLauncherVersion(isBeta)
+	serverVersion = serverVersion[4:] // removing updater version
 
 	var versionChanged bool
 	if isBeta {
@@ -39,43 +53,102 @@ func IsVersionChanged(dir string, isBeta bool) (bool, error) {
 	}
 
 	if versionChanged {
+		var oldVersion string
 		if isBeta {
+			oldVersion = versionFile.Beta
 			versionFile.Beta = serverVersion
 		} else {
+			oldVersion = versionFile.Main
 			versionFile.Main = serverVersion
 		}
 
-		// marshal the version file
-		versions, err = json.Marshal(versionFile)
+		versionsCurrent, err := json.Marshal(versionFile)
 		if err != nil {
-			return false, err
+			return false, oldVersion, serverVersion, err
 		}
 
-		// write the version file
-		err = os.WriteFile(versionFilePath, versions, 0644)
+		err = os.WriteFile(versionFilePath, versionsCurrent, 0644)
 		if err != nil {
-			return false, err
+			return false, oldVersion, serverVersion, err
 		}
 
-		return true, nil
+		if oldVersion == "" { // first time, just save the file
+			return false, oldVersion, serverVersion, nil
+		}
+
+		return true, oldVersion, serverVersion, nil
 	}
 
-	return false, nil
+	return false, serverVersion, serverVersion, nil
 }
 
-func SpawnWatchdog(dir string, isBeta bool, hook string) {
+func SpawnWatchdog(dir string, gameRelease string, hook string, token string, versionFilePath string, customBodyPath string) *time.Ticker {
 	ticker := time.NewTicker(1 * time.Minute)
 
 	go func() {
 		for range ticker.C {
-			changed, err := IsVersionChanged(dir, isBeta)
+			changed, oldVersion, newVersion, err := VersionChanged(dir, gameRelease, versionFilePath, customBodyPath)
 			if err != nil {
 				log.Error(err)
 			} else {
 				if changed {
-					log.Info("🎉 New version available!")
+					log.Info(fmt.Sprintf("🎉 New %s version available: %s", gameRelease, newVersion))
 
-					resp, err := http.Get(hook)
+					var isJson bool
+					var body []byte
+					if customBodyPath == "" {
+						isJson = true
+						jsonBody := map[string]string{
+							"message":     "🎉 New Dofus version available!",
+							"old_version": oldVersion,
+							"new_version": newVersion,
+							"release":     gameRelease,
+						}
+
+						body, err = json.Marshal(jsonBody)
+						if err != nil {
+							log.Error(err)
+						}
+					} else {
+						if filepath.Ext(customBodyPath) == ".json" {
+							isJson = true
+						}
+
+						body, err = os.ReadFile(customBodyPath)
+						if err != nil {
+							log.Error(err)
+						}
+
+						body = []byte(os.Expand(string(body), func(key string) string {
+							switch key {
+							case "oldVersion":
+								return oldVersion
+							case "newVersion":
+								return newVersion
+							case "release":
+								return gameRelease
+							default:
+								return ""
+							}
+						}))
+					}
+
+					req, err := http.NewRequest("POST", hook, bytes.NewBuffer(body))
+					if err != nil {
+						log.Error(err)
+					}
+
+					if isJson {
+						req.Header.Set("Content-Type", "application/json")
+					} else {
+						req.Header.Set("Content-Type", "text/plain")
+					}
+
+					if token != "" {
+						req.Header.Set("Authorization", "Bearer "+token)
+					}
+
+					resp, err := http.DefaultClient.Do(req)
 					if err != nil {
 						log.Error(err)
 					} else {
@@ -88,4 +161,6 @@ func SpawnWatchdog(dir string, isBeta bool, hook string) {
 			}
 		}
 	}()
+
+	return ticker
 }
