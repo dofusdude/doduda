@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/unpack"
 	mapping "github.com/dofusdude/dodumap"
+	jsnan "github.com/xhhuango/json"
 )
 
 type HashFile struct {
@@ -50,22 +52,22 @@ func Values[M ~map[K]V, K comparable, V any](m M) []V {
 	return r
 }
 
-func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string) {
+func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string, indent string) {
 	arr := Values(mounts.Mounts)
 	workerSlices := PartitionSlice(arr, worker)
 
 	wg := sync.WaitGroup{}
 	for _, workerSlice := range workerSlices {
 		wg.Add(1)
-		go func(workerSlice []mapping.JSONGameMount, dir string) {
+		go func(workerSlice []mapping.JSONGameMount, dir string, indent string) {
 			defer wg.Done()
-			DownloadMountImageWorker(hashJson, "main", dir, workerSlice)
-		}(workerSlice, dir)
+			DownloadMountImageWorker(hashJson, "main", dir, workerSlice, indent)
+		}(workerSlice, dir, indent)
 	}
 	wg.Wait()
 }
 
-func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount) {
+func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount, indent string) {
 	wg := sync.WaitGroup{}
 
 	for _, mount := range workerSlice {
@@ -75,8 +77,8 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, di
 			var image HashFile
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
-			outPath := filepath.Join(dir, "data/img/mount")
-			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, true)
+			outPath := filepath.Join(dir, "data", "img", "mount")
+			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, true, indent)
 		}(mount.Id, &wg, dir)
 
 		//  Missing bundle for content/gfx/mounts/162.swf
@@ -86,8 +88,8 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, di
 			var image HashFile
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
-			outPath := filepath.Join(dir, "data/vector/mount")
-			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false)
+			outPath := filepath.Join(dir, "data", "vector", "mount")
+			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false, indent)
 		}(mount.Id, &wg, dir)
 	}
 
@@ -201,7 +203,7 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
-func Download(beta bool, dir string, manifest string, mountsWorker int, ignore []string) error {
+func Download(beta bool, dir string, manifest string, mountsWorker int, ignore []string, indent string) error {
 	CleanUp(dir)
 	CreateDataDirectoryStructure(dir)
 
@@ -220,8 +222,6 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		}
 	} else {
 		var err error
-
-		// check if manifest is a file
 		if _, err := os.Stat(manifest); os.IsNotExist(err) {
 			log.Fatal(err)
 		}
@@ -241,7 +241,10 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 			return err
 		}
 
-		marshalledBytes, _ := json.MarshalIndent(ankaManifest, "", "  ")
+		marshalledBytes, err := json.Marshal(ankaManifest)
+		if err != nil {
+			log.Fatal(err)
+		}
 		os.WriteFile(manifestSearchPath, marshalledBytes, os.ModePerm)
 	} else {
 		log.Infof("Using manifest file %s", manifestPath)
@@ -268,7 +271,7 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		waitGrp.Add(1)
 		go func(manifest *ankabuffer.Manifest, dir string) {
 			defer waitGrp.Done()
-			if err := DownloadLanguages(manifest, dir); err != nil {
+			if err := DownloadLanguages(manifest, dir, indent); err != nil {
 				log.Fatal(err)
 			}
 		}(&ankaManifest, dir)
@@ -286,12 +289,12 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 
 	if !contains(ignore, "items") {
 		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string) {
+		go func(manifest *ankabuffer.Manifest, dir string, indent string) {
 			defer waitGrp.Done()
-			if err := DownloadItems(manifest, dir); err != nil {
+			if err := DownloadItems(manifest, dir, indent); err != nil {
 				log.Fatal(err)
 			}
-		}(&ankaManifest, dir)
+		}(&ankaManifest, dir, indent)
 	}
 
 	waitGrp.Wait()
@@ -300,7 +303,7 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		log.Info("Parsing for missing mount images...")
 		gamedata := mapping.ParseRawData(dir)
 		log.Info("Downloading mount images...")
-		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir)
+		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, indent)
 		log.Info("... mount images downloaded")
 	}
 
@@ -333,7 +336,7 @@ func CleanUp(dir string) {
 	os.RemoveAll(fmt.Sprintf("%s/data", dir))
 }
 
-func Unpack(file string, dir string, destDir string) {
+func Unpack(file string, dir string, destDir string, indent string) {
 	suffix := filepath.Ext(file)[1:]
 
 	if suffix == "png" || suffix == "jpg" || suffix == "jpeg" {
@@ -346,8 +349,6 @@ func Unpack(file string, dir string, destDir string) {
 
 	fileNoExt := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
-
-	log.Infof("📖 %s -> %s", file, absOutPath)
 
 	supportedUnpack := []string{"d2o", "d2i"}
 	isSupported := false
@@ -375,7 +376,17 @@ func Unpack(file string, dir string, destDir string) {
 		}
 
 		objects := reader.GetObjects()
-		marshalledBytes, _ := json.MarshalIndent(objects, "", "  ")
+		var marshalledBytes []byte
+		if indent != "" {
+			marshalledBytes, err = jsnan.MarshalIndent(objects, "", indent)
+		} else {
+			marshalledBytes, err = jsnan.Marshal(objects)
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
+
 		os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
 	}
 
@@ -387,12 +398,23 @@ func Unpack(file string, dir string, destDir string) {
 		defer f.Close()
 
 		data := unpack.NewD2I(f).Read()
-		marshalledBytes, _ := json.MarshalIndent(data, "", "  ")
+
+		var marshalledBytes []byte
+		if indent != "" {
+			marshalledBytes, err = jsnan.MarshalIndent(data, "", indent)
+		} else {
+			marshalledBytes, err = jsnan.Marshal(data)
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
+
 		os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
 	}
 }
 
-func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool) error {
+func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string) error {
 	var filesToDownload []ankabuffer.File
 	for i, file := range toDownload {
 		if manifest.Fragments[fragment].Files[file.Filename].Name == "" {
@@ -511,10 +533,14 @@ func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownl
 				log.Fatal(err)
 				return
 			}
-			log.Infof("%s ✅ -> 📂 %s", file.Name, offlineFilePath)
+			log.Infof("%s ✅", filepath.Base(file.Name))
 
 			if unpack {
-				Unpack(offlineFilePath, dir, destDir)
+				Unpack(offlineFilePath, dir, destDir, indent)
+				err = os.Remove(offlineFilePath)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		}(file, bundlesBuffer, dir, destDir, i)
 	}

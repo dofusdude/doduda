@@ -7,6 +7,7 @@ require (
 	github.com/dofusdude/ankabuffer v0.0.8
 	github.com/dofusdude/dodumap v0.0.0-20230805084437-382643434935
 	github.com/spf13/cobra v1.7.0
+	github.com/xhhuango/json v1.19.0
 )
 
 require (

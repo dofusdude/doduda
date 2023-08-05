@@ -64,7 +64,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string) error {
 
 	inPath := filepath.Join(dir, "data", "tmp")
 	outPath := filepath.Join(dir, "data", "img", "item")
-	if err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, inPath, false); err != nil {
+	if err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, inPath, false, ""); err != nil {
 		return err
 	}
 
@@ -80,7 +80,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string) error {
 
 	inPath = filepath.Join(dir, "data", "tmp", "vector")
 	outPath = filepath.Join(dir, "data", "vector", "item")
-	if err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, inPath, false); err != nil {
+	if err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, inPath, false, ""); err != nil {
 		return err
 	}
 
