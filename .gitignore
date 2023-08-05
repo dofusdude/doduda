@@ -2,3 +2,4 @@ data/
 manifest.json
 doduda
 version/
+.version.json

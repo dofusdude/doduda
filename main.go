@@ -53,7 +53,7 @@ func main() {
 
 	watchdogCmd.Flags().StringP("hook", "H", "", "Hook URL to send a POST request to when a change is detected.")
 	watchdogCmd.Flags().String("auth-header", "", "Authorization header if required for the POST request. Example 'Bearer 12345'")
-	watchdogCmd.Flags().String("path", "", "Filepath for json version persistence. Defaults to `${dir}/version/version.json`.")
+	watchdogCmd.Flags().String("path", "", "Filepath for json version persistence. Defaults to `${dir}/.version.json`.")
 	watchdogCmd.Flags().String("body", "", "Filepath to a custom message body for the hook. Available variables ${release}, ${oldVersion}, ${newVersion}.")
 	watchdogCmd.Flags().Bool("initial-hook", false, "Notify immediatly after checking the version after first timer event, even at first startup.")
 	watchdogCmd.Flags().Bool("volatile", false, "Controls writing the persistence file. Enabling it will trigger the hook every time the trigger fires.")
@@ -145,7 +145,7 @@ func watchdogCommand(ccmd *cobra.Command, args []string) {
 	}
 
 	if versionFilePath == "" {
-		versionFilePath = filepath.Join(dir, "version", "version.json")
+		versionFilePath = filepath.Join(dir, ".version.json")
 	}
 
 	customBodyPath, err := ccmd.Flags().GetString("body")
