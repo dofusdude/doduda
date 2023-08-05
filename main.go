@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
-	"github.com/dofusdude/doduda/mapping"
+	mapping "github.com/dofusdude/dodumap"
 	"github.com/spf13/cobra"
 )
 

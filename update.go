@@ -13,8 +13,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/dofusdude/ankabuffer"
-	"github.com/dofusdude/doduda/mapping"
 	"github.com/dofusdude/doduda/unpack"
+	mapping "github.com/dofusdude/dodumap"
 )
 
 type HashFile struct {
