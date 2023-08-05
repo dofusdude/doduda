@@ -1,33 +1,4 @@
-package main
-
-type SearchIndexedItem struct {
-	Id          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	SuperType   string `json:"super_type"`
-	TypeName    string `json:"type_name"`
-	Level       int    `json:"level"`
-	StuffType   string `json:"stuff_type"`
-}
-
-type SearchIndexedMount struct {
-	Id         int    `json:"id"`
-	Name       string `json:"name"`
-	FamilyName string `json:"family_name"`
-	StuffType  string `json:"stuff_type"`
-}
-
-type SearchIndexedSet struct {
-	Id        int    `json:"id"`
-	Name      string `json:"name"`
-	Level     int    `json:"highest_equipment_level"`
-	StuffType string `json:"stuff_type"`
-}
-
-type EffectConditionDbEntry struct {
-	Id   int
-	Name string
-}
+package mapping
 
 type MappedMultilangCondition struct {
 	Element   string            `json:"element"`

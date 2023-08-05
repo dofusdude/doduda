@@ -1,9 +1,11 @@
-package main
+package mapping
 
 import (
 	"fmt"
 	"log"
 )
+
+var Languages = []string{"de", "en", "es", "fr", "it", "pt"}
 
 func MapSets(data *JSONGameData, langs *map[string]LangDict) []MappedMultilangSet {
 	var mappedSets []MappedMultilangSet

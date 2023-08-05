@@ -4,19 +4,21 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	"github.com/dofusdude/doduda/mapping"
 )
 
-var TestingLangs map[string]LangDict
-var TestingData *JSONGameData
+var TestingLangs map[string]mapping.LangDict
+var TestingData *mapping.JSONGameData
 
 func TestMain(m *testing.M) {
 	path, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
-	TestingLangs = ParseRawLanguages(path)
-	TestingData = ParseRawData(path)
-	LoadPersistedElements(path)
+	TestingLangs = mapping.ParseRawLanguages(path)
+	TestingData = mapping.ParseRawData(path)
+	mapping.LoadPersistedElements(path)
 
 	if TestingLangs == nil {
 		log.Fatal("testingLangs is nil")
@@ -30,7 +32,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestParseSigness1(t *testing.T) {
-	num, side := ParseSigness("-#1{~1~2 und -}#2")
+	num, side := mapping.ParseSigness("-#1{~1~2 und -}#2")
 	if !num {
 		t.Error("num is false")
 	}
@@ -40,7 +42,7 @@ func TestParseSigness1(t *testing.T) {
 }
 
 func TestParseSigness2(t *testing.T) {
-	num, side := ParseSigness("#1{~1~2 und -}#2")
+	num, side := mapping.ParseSigness("#1{~1~2 und -}#2")
 	if num {
 		t.Error("num is true")
 	}
@@ -50,7 +52,7 @@ func TestParseSigness2(t *testing.T) {
 }
 
 func TestParseSigness3(t *testing.T) {
-	num, side := ParseSigness("#1{~1~2 und }#2")
+	num, side := mapping.ParseSigness("#1{~1~2 und }#2")
 	if side {
 		t.Error("side is true")
 	}
@@ -60,7 +62,7 @@ func TestParseSigness3(t *testing.T) {
 }
 
 func TestParseSigness4(t *testing.T) {
-	num, side := ParseSigness("-#1{~1~2 und }-#2")
+	num, side := mapping.ParseSigness("-#1{~1~2 und }-#2")
 	if !side {
 		t.Error("side is false")
 	}
@@ -70,7 +72,7 @@ func TestParseSigness4(t *testing.T) {
 }
 
 func TestParseConditionSimple(t *testing.T) {
-	condition := ParseCondition("cs<25", &TestingLangs, TestingData)
+	condition := mapping.ParseCondition("cs<25", &TestingLangs, TestingData)
 
 	if len(condition) != 1 {
 		t.Errorf("condition length is not 1: %d", len(condition))
@@ -87,7 +89,7 @@ func TestParseConditionSimple(t *testing.T) {
 }
 
 func TestParseConditionMulti(t *testing.T) {
-	condition := ParseCondition("CS>80&CV>40&CA>40", &TestingLangs, TestingData)
+	condition := mapping.ParseCondition("CS>80&CV>40&CA>40", &TestingLangs, TestingData)
 
 	if len(condition) != 3 {
 		t.Errorf("condition length is not 3: %d", len(condition))
@@ -125,75 +127,75 @@ func TestParseConditionMulti(t *testing.T) {
 }
 
 func TestDeleteNumHash(t *testing.T) {
-	effect_name := DeleteDamageFormatter("Austauschbar ab: #1")
+	effect_name := mapping.DeleteDamageFormatter("Austauschbar ab: #1")
 	if effect_name != "Austauschbar ab:" {
 		t.Errorf("output is not as expected: %s", effect_name)
 	}
 }
 
 func TestParseConditionEmpty(t *testing.T) {
-	condition := ParseCondition("null", &TestingLangs, TestingData)
+	condition := mapping.ParseCondition("null", &TestingLangs, TestingData)
 	if len(condition) > 0 {
 		t.Errorf("condition should be empty")
 	}
 }
 
 func TestParseSingularPluralFormatterNormal(t *testing.T) {
-	formatted := SingularPluralFormatter("Filzpunkte", 1, "de")
+	formatted := mapping.SingularPluralFormatter("Filzpunkte", 1, "de")
 	if formatted != "Filzpunkte" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestParseSingularPluralFormatterPlural(t *testing.T) {
-	formatted := SingularPluralFormatter("Kommt in %1 Subgebiet{~pen} vor", 2, "es")
+	formatted := mapping.SingularPluralFormatter("Kommt in %1 Subgebiet{~pen} vor", 2, "es")
 	if formatted != "Kommt in %1 Subgebieten vor" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 
-	formatted = SingularPluralFormatter("Punkt{~pe} erforderlich", 2, "es")
+	formatted = mapping.SingularPluralFormatter("Punkt{~pe} erforderlich", 2, "es")
 	if formatted != "Punkte erforderlich" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestParseSingularPluralFormatterPluralMulti(t *testing.T) {
-	formatted := SingularPluralFormatter("Kommt in %1 Subgebiet{~pen} mit Punkt{~pe} vor", 2, "es")
+	formatted := mapping.SingularPluralFormatter("Kommt in %1 Subgebiet{~pen} mit Punkt{~pe} vor", 2, "es")
 	if formatted != "Kommt in %1 Subgebieten mit Punkte vor" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestParseSingularPluralFormatterSingularMulti(t *testing.T) {
-	formatted := SingularPluralFormatter("Kommt in %1 Subgebiet{~sen} mit Punkt{~se} vor", 1, "es")
+	formatted := mapping.SingularPluralFormatter("Kommt in %1 Subgebiet{~sen} mit Punkt{~se} vor", 1, "es")
 	if formatted != "Kommt in %1 Subgebieten mit Punkte vor" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestParseSingularPluralFormatterPluralComplexUnicode(t *testing.T) {
-	formatted := SingularPluralFormatter("invocaç{~pões}", 2, "pt")
+	formatted := mapping.SingularPluralFormatter("invocaç{~pões}", 2, "pt")
 	if formatted != "invocações" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestParseSingularPluralFormatterPluralDeleteIfSingular(t *testing.T) {
-	formatted := SingularPluralFormatter("invocaç{~pões}", 1, "pt")
+	formatted := mapping.SingularPluralFormatter("invocaç{~pões}", 1, "pt")
 	if formatted != "invocaç" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestDeleteDamageTemplate(t *testing.T) {
-	formatted := DeleteDamageFormatter("#1{~1~2 bis }#2 (Erdschaden)")
+	formatted := mapping.DeleteDamageFormatter("#1{~1~2 bis }#2 (Erdschaden)")
 	if formatted != "(Erdschaden)" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
 }
 
 func TestDeleteDamageTemplateLevelEnBug(t *testing.T) {
-	formatted := DeleteDamageFormatter("+#1{~1~2 to}level #2")
+	formatted := mapping.DeleteDamageFormatter("+#1{~1~2 to}level #2")
 	if formatted != "level" {
 		t.Errorf("output is not as expected: %s", formatted)
 	}
@@ -204,7 +206,7 @@ func TestParseNumSpellNameFormatterItSpecial(t *testing.T) {
 	diceNum := 100
 	diceSide := 233
 	value := 0
-	output, _ := NumSpellFormatter(input, "it", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "it", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Ottieni: 100 - 233 kama" {
 		t.Errorf("output is not as expected: %s", output)
@@ -224,7 +226,7 @@ func TestParseNumSpellNameFormatterItSpecialSwitch(t *testing.T) {
 	diceNum := 100
 	diceSide := 36
 	value := 0
-	output, _ := NumSpellFormatter(input, "it", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "it", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "36: +100 EP" {
 		t.Errorf("output is not as expected: %s", output)
@@ -244,7 +246,7 @@ func TestParseNumSpellNameFormatterLearnSpellLevel(t *testing.T) {
 	diceNum := 0
 	diceSide := 0
 	value := 1746
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Stufe 1746 des Zauberspruchs erlernen" {
 		t.Errorf("output is not as expected: %s", output)
@@ -256,7 +258,7 @@ func TestParseNumSpellNameFormatterLearnSpellLevel1(t *testing.T) {
 	diceNum := 0
 	diceSide := 1
 	value := 0
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Stufe 1 des Zauberspruchs erlernen" {
 		t.Errorf("output is not as expected: %s", output)
@@ -268,7 +270,7 @@ func TestParseNumSpellNameFormatterDeNormal(t *testing.T) {
 	diceNum := 100
 	diceSide := 233
 	value := 0
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "100 bis 233 Kamagewinn" {
 		t.Errorf("output is not as expected: %s", output)
@@ -280,7 +282,7 @@ func TestParseNumSpellNameFormatterMultiValues(t *testing.T) {
 	diceNum := 1
 	diceSide := 2
 	value := 0
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Erfolgschance zwischen 1 und 2%" {
 		t.Errorf("output is not as expected: %s", output)
@@ -290,7 +292,7 @@ func TestParseNumSpellNameFormatterMultiValues(t *testing.T) {
 	diceNum = 1
 	diceSide = 2
 	value = 0
-	output, _ = NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ = mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Erfolgschance zwischen -1 und -2%" {
 		t.Errorf("output is not as expected: %s", output)
@@ -302,7 +304,7 @@ func TestParseNumSpellNameFormatterVitaRange(t *testing.T) {
 	diceNum := 0
 	diceSide := 300
 	value := 0
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, true)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, true)
 
 	if output != "0 bis 300 Vitalität" {
 		t.Errorf("output is not as expected: %s", output)
@@ -314,7 +316,7 @@ func TestParseNumSpellNameFormatterSingle(t *testing.T) {
 	diceNum := 1
 	diceSide := 0
 	value := 0
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Austauschbar ab: 1" {
 		t.Errorf("output is not as expected: %s", output)
@@ -326,7 +328,7 @@ func TestParseNumSpellNameFormatterMinMax(t *testing.T) {
 	diceNum := 2
 	diceSide := 5
 	value := 6
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 	if output != "Verbleib. Anwendungen: 5 / 6" {
 		t.Errorf("output is not as expected: %s", output)
 	}
@@ -337,7 +339,7 @@ func TestParseNumSpellNameFormatterSpellDiceNum(t *testing.T) {
 	diceNum := 15960
 	diceSide := 0
 	value := 0
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 
 	if output != "Zauberwurf: Mauschelei" {
 		t.Errorf("output is not as expected: %s", output)
@@ -350,7 +352,7 @@ func TestParseNumSpellNameFormatterEffectsRange(t *testing.T) {
 	diceSide := 50
 	value := 0
 
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 	if output != "-25 bis -50 Luftschaden" {
 		t.Errorf("output is not as expected: %s", output)
 	}
@@ -362,7 +364,7 @@ func TestParseNumSpellNameFormatterMissingWhite(t *testing.T) {
 	diceSide := 0
 	value := 0
 
-	output, _ := NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
+	output, _ := mapping.NumSpellFormatter(input, "de", TestingData, &TestingLangs, &diceNum, &diceSide, &value, 0, false, false)
 	if output != "1 level" {
 		t.Errorf("output is not as expected: %s", output)
 	}

@@ -13,15 +13,85 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/dofusdude/ankabuffer"
+	"github.com/dofusdude/doduda/mapping"
 	"github.com/dofusdude/doduda/unpack"
 )
-
-var Languages = []string{"de", "en", "es", "fr", "it", "pt"}
 
 type HashFile struct {
 	Hash         string
 	Filename     string
 	FriendlyName string
+}
+
+func PartitionSlice[T any](items []T, parts int) (chunks [][]T) {
+	var divided [][]T
+
+	chunkSize := (len(items) + parts - 1) / parts
+
+	for i := 0; i < len(items); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(items) {
+			end = len(items)
+		}
+
+		divided = append(divided, items[i:end])
+	}
+
+	return divided
+}
+
+// https://stackoverflow.com/questions/13422578/in-go-how-to-get-a-slice-of-values-from-a-map
+func Values[M ~map[K]V, K comparable, V any](m M) []V {
+	r := make([]V, 0, len(m))
+	for _, v := range m {
+		r = append(r, v)
+	}
+	return r
+}
+
+func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string) {
+	arr := Values(mounts.Mounts)
+	workerSlices := PartitionSlice(arr, worker)
+
+	wg := sync.WaitGroup{}
+	for _, workerSlice := range workerSlices {
+		wg.Add(1)
+		go func(workerSlice []mapping.JSONGameMount, dir string) {
+			defer wg.Done()
+			DownloadMountImageWorker(hashJson, "main", dir, workerSlice)
+		}(workerSlice, dir)
+	}
+	wg.Wait()
+}
+
+func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount) {
+	wg := sync.WaitGroup{}
+
+	for _, mount := range workerSlice {
+		wg.Add(1)
+		go func(mountId int, wg *sync.WaitGroup, dir string) {
+			defer wg.Done()
+			var image HashFile
+			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
+			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
+			outPath := filepath.Join(dir, "data/img/mount")
+			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, true)
+		}(mount.Id, &wg, dir)
+
+		//  Missing bundle for content/gfx/mounts/162.swf
+		wg.Add(1)
+		go func(mountId int, wg *sync.WaitGroup, dir string) {
+			defer wg.Done()
+			var image HashFile
+			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
+			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
+			outPath := filepath.Join(dir, "data/vector/mount")
+			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false)
+		}(mount.Id, &wg, dir)
+	}
+
+	wg.Wait()
 }
 
 func GetLatestLauncherVersion(beta bool) string {
@@ -228,7 +298,7 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 
 	if !contains(ignore, "mountsimages") {
 		log.Info("Parsing for missing mount images...")
-		gamedata := ParseRawData(dir)
+		gamedata := mapping.ParseRawData(dir)
 		log.Info("Downloading mount images...")
 		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir)
 		log.Info("... mount images downloaded")

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
+	"github.com/dofusdude/doduda/mapping"
 	"github.com/spf13/cobra"
 )
 
@@ -111,7 +112,7 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 
 	dir = parseWd(dir)
 
-	Parse(dir, indent)
+	mapping.Parse(dir, indent)
 	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
 }
 
