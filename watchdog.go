@@ -94,7 +94,7 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 	return false, serverVersion, serverVersion, nil
 }
 
-func watchdogTick(endTimer chan bool, ticker *time.Ticker, dir string, gameRelease string, versionFilePath string, customBodyPath string, volatile bool, initialHook *bool, hook string, token string, deadlyHook bool) {
+func watchdogTick(endTimer chan bool, ticker *time.Ticker, dir string, gameRelease string, versionFilePath string, customBodyPath string, volatile bool, initialHook *bool, hook string, authHeader string, deadlyHook bool) {
 	changed, oldVersion, newVersion, err := VersionChanged(dir, gameRelease, versionFilePath, customBodyPath, volatile, initialHook)
 
 	if err != nil {
@@ -154,8 +154,8 @@ func watchdogTick(endTimer chan bool, ticker *time.Ticker, dir string, gameRelea
 				req.Header.Set("Content-Type", "text/plain")
 			}
 
-			if token != "" {
-				req.Header.Set("Authorization", "Bearer "+token)
+			if authHeader != "" {
+				req.Header.Set("Authorization", authHeader)
 			}
 
 			resp, err := http.DefaultClient.Do(req)
