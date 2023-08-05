@@ -48,7 +48,7 @@ func main() {
 	rootCmd.PersistentFlags().IntP("workers", "j", 2, "Number of workers to use for downloading.")
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'images', 'mountsimages'.")
 
-	parseCmd.Flags().BoolP("indent", "i", false, "Indent the JSON output (increases file size)")
+	parseCmd.Flags().BoolP("indent", "I", false, "Indent the JSON output (increases file size)")
 	rootCmd.AddCommand(parseCmd)
 
 	watchdogCmd.Flags().StringP("hook", "H", "", "Hook URL to send a POST request to when a change is detected.")
