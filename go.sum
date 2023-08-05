@@ -10,6 +10,8 @@ github.com/dofusdude/ankabuffer v0.0.8 h1:sWcUweUA8MNSNBRStbb+LxxiI21gJckWhpLX21
 github.com/dofusdude/ankabuffer v0.0.8/go.mod h1:thGiWt9q3jQ9HXF4toodro2t9cPSECFALSeVq2CEphg=
 github.com/dofusdude/dodumap v0.0.0-20230805084437-382643434935 h1:nTFH5zEXHt9XK4eQVAXg69IGL/Cb2g8C36jU2nVhcOQ=
 github.com/dofusdude/dodumap v0.0.0-20230805084437-382643434935/go.mod h1:HcIpovf107gqKg4QFL15D2iYp9rW3lnzw51z3hrJM1I=
+github.com/dofusdude/dodumap v0.0.0-20230805192614-1d7f2d55885a h1:yO3cTnVekGTaaJYkO8k1zYWtohNQMR85408Rp6U83vQ=
+github.com/dofusdude/dodumap v0.0.0-20230805192614-1d7f2d55885a/go.mod h1:HcIpovf107gqKg4QFL15D2iYp9rW3lnzw51z3hrJM1I=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/go-logfmt/logfmt v0.6.0 h1:wGYYu3uicYdqXVgoYbvnkrPVXkuLM1p1ifugDMEdRi4=
