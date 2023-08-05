@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/dofusdude/ankabuffer"
+	"github.com/dofusdude/doduda/unpack"
 )
 
 var Languages = []string{"de", "en", "es", "fr", "it", "pt"}
@@ -131,7 +131,7 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
-func Download(beta bool, dir string, pythonPath string, manifest string, mountsWorker int, ignore []string) error {
+func Download(beta bool, dir string, manifest string, mountsWorker int, ignore []string) error {
 	CleanUp(dir)
 	CreateDataDirectoryStructure(dir)
 
@@ -196,32 +196,32 @@ func Download(beta bool, dir string, pythonPath string, manifest string, mountsW
 	var waitGrp sync.WaitGroup
 	if !contains(ignore, "languages") {
 		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
+		go func(manifest *ankabuffer.Manifest, dir string) {
 			defer waitGrp.Done()
-			if err := DownloadLanguages(manifest, dir, pythonPath); err != nil {
+			if err := DownloadLanguages(manifest, dir); err != nil {
 				log.Fatal(err)
 			}
-		}(&ankaManifest, dir, pythonPath)
+		}(&ankaManifest, dir)
 	}
 
 	if !contains(ignore, "images") {
 		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
+		go func(manifest *ankabuffer.Manifest, dir string) {
 			defer waitGrp.Done()
-			if err := DownloadImagesLauncher(manifest, dir, pythonPath); err != nil {
+			if err := DownloadImagesLauncher(manifest, dir); err != nil {
 				log.Fatal(err)
 			}
-		}(&ankaManifest, dir, pythonPath)
+		}(&ankaManifest, dir)
 	}
 
 	if !contains(ignore, "items") {
 		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string, pythonPath string) {
+		go func(manifest *ankabuffer.Manifest, dir string) {
 			defer waitGrp.Done()
-			if err := DownloadItems(manifest, dir, pythonPath); err != nil {
+			if err := DownloadItems(manifest, dir); err != nil {
 				log.Fatal(err)
 			}
-		}(&ankaManifest, dir, pythonPath)
+		}(&ankaManifest, dir)
 	}
 
 	waitGrp.Wait()
@@ -230,7 +230,7 @@ func Download(beta bool, dir string, pythonPath string, manifest string, mountsW
 		log.Info("Parsing for missing mount images...")
 		gamedata := ParseRawData(dir)
 		log.Info("Downloading mount images...")
-		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, pythonPath)
+		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir)
 		log.Info("... mount images downloaded")
 	}
 
@@ -263,16 +263,12 @@ func CleanUp(dir string) {
 	os.RemoveAll(fmt.Sprintf("%s/data", dir))
 }
 
-func Unpack(file string, dir string, destDir string, pythonPath string) {
-	var err error
-
+func Unpack(file string, dir string, destDir string) {
 	suffix := filepath.Ext(file)[1:]
 
 	if suffix == "png" || suffix == "jpg" || suffix == "jpeg" {
 		return // no need to unpack images files
 	}
-
-	absConvertCmd := fmt.Sprintf("%s/PyDofus/%s_unpack.py", dir, suffix)
 
 	if _, err := os.Stat(file); os.IsNotExist(err) {
 		log.Fatal(err)
@@ -280,22 +276,53 @@ func Unpack(file string, dir string, destDir string, pythonPath string) {
 
 	fileNoExt := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
-	fileButJson := strings.Replace(file, filepath.Ext(file), ".json", 1)
 
 	log.Infof("📖 %s -> %s", file, absOutPath)
 
-	err = exec.Command(pythonPath, absConvertCmd, file).Run()
-	if err != nil {
-		log.Fatalf("Unpacking failed: %s %s %s with Error %v", pythonPath, absConvertCmd, file, err)
+	supportedUnpack := []string{"d2o", "d2i"}
+	isSupported := false
+	for _, unpackType := range supportedUnpack {
+		if suffix == unpackType {
+			isSupported = true
+			break
+		}
 	}
 
-	err = os.Rename(fileButJson, absOutPath)
-	if err != nil {
-		log.Fatal(err)
+	if !isSupported {
+		log.Warnf("Unsupported file type for unpacking %s", suffix)
+	}
+
+	if suffix == "d2o" {
+		f, err := os.Open(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		reader, err := unpack.NewD2OReader(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		objects := reader.GetObjects()
+		marshalledBytes, _ := json.MarshalIndent(objects, "", "  ")
+		os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+	}
+
+	if suffix == "d2i" {
+		f, err := os.Open(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		data := unpack.NewD2I(f).Read()
+		marshalledBytes, _ := json.MarshalIndent(data, "", "  ")
+		os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
 	}
 }
 
-func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, pythonPath string) error {
+func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool) error {
 	var filesToDownload []ankabuffer.File
 	for i, file := range toDownload {
 		if manifest.Fragments[fragment].Files[file.Filename].Name == "" {
@@ -417,7 +444,7 @@ func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownl
 			log.Infof("%s ✅ -> 📂 %s", file.Name, offlineFilePath)
 
 			if unpack {
-				Unpack(offlineFilePath, dir, destDir, pythonPath)
+				Unpack(offlineFilePath, dir, destDir)
 			}
 		}(file, bundlesBuffer, dir, destDir, i)
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/dofusdude/ankabuffer"
 )
 
-func DownloadItems(hashJson *ankabuffer.Manifest, dir string, pythonPath string) error {
+func DownloadItems(hashJson *ankabuffer.Manifest, dir string) error {
 	log.Info("Downloading items...")
 	fileNames := []HashFile{
 		{Filename: "data/common/Items.d2o", FriendlyName: "items.d2o"},
@@ -39,7 +39,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, dir string, pythonPath string)
 	}
 
 	outPath := filepath.Join(dir, "data")
-	err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, outPath, true, pythonPath)
+	err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, outPath, true)
 
 	log.Info("... downloaded items")
 	return err

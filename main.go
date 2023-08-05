@@ -17,34 +17,52 @@ var (
 		Short:         "doduda – Ankama data gathering CLI",
 		Long:          `A CLI for Ankama data gathering, versioning, parsing and more.`,
 		SilenceErrors: true,
-		SilenceUsage:  true,
+		SilenceUsage:  false,
 		Run:           rootCommand,
 	}
 
 	parseCmd = &cobra.Command{
 		Use:           "parse",
-		Short:         "parse and map the data for application ready use",
+		Short:         "Parse and map the raw data downloaded data for to be more easily consumable.",
 		Long:          ``,
 		SilenceErrors: true,
-		SilenceUsage:  true,
+		SilenceUsage:  false,
 		Run:           parseCommand,
+	}
+
+	watchdogCmd = &cobra.Command{
+		Use:           "listen",
+		Short:         "Spawns a watchdog.",
+		Long:          `Listens to the game version API from the Ankama Launcher and notifies you when a new version is available.`,
+		SilenceErrors: true,
+		SilenceUsage:  false,
+		Run:           watchdogCommand,
 	}
 )
 
 func main() {
-	rootCmd.PersistentFlags().BoolP("beta", "b", false, "Use beta Game version")
+	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. Available: 'main', 'beta'.")
 	rootCmd.PersistentFlags().StringP("dir", "d", ".", "Working directory")
-	rootCmd.PersistentFlags().StringP("python", "p", "/usr/bin/python3", "Python path with all installed packages for PyDofus")
-	rootCmd.PersistentFlags().StringP("manifest", "m", "", "Manifest file path. Empty will download it if it is not found.")
-	rootCmd.PersistentFlags().IntP("workers", "w", 2, "Number of workers to use for downloading")
-	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore steps [mounts]")
+	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
+	rootCmd.PersistentFlags().IntP("workers", "j", 2, "Number of workers to use for downloading.")
+	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'images', 'mountsimages'.")
 
 	parseCmd.Flags().BoolP("indent", "i", false, "Indent the JSON output (increases file size)")
 	rootCmd.AddCommand(parseCmd)
 
+	watchdogCmd.Flags().StringP("hook", "H", "", "Hook URL to send a POST request to when a change is detected.")
+	watchdogCmd.Flags().String("auth-header", "", "Authorization header if required for the POST request. Example 'Bearer 12345'")
+	watchdogCmd.Flags().String("path", "", "Filepath for json version persistence. Defaults to `${dir}/version/version.json`.")
+	watchdogCmd.Flags().String("body", "", "Filepath to a custom message body for the hook. Available variables ${release}, ${oldVersion}, ${newVersion}.")
+	watchdogCmd.Flags().Bool("initial-hook", false, "Notify immediatly after checking the version after first timer event, even at first startup.")
+	watchdogCmd.Flags().Bool("volatile", false, "Controls writing the persistence file. Enabling it will trigger the hook every time the trigger fires.")
+	watchdogCmd.Flags().Bool("deadly-hook", false, "End process after first successful notification.")
+	watchdogCmd.Flags().Uint32("interval", 5, "Interval in minutes to check for new versions. 0 will tick once immediatly and then exit.")
+	rootCmd.AddCommand(watchdogCmd)
+
 	err := rootCmd.Execute()
 	if err != nil && err.Error() != "" {
-		log.Fatal(err.Error())
+		fmt.Fprintln(os.Stderr, err)
 	}
 }
 
@@ -76,11 +94,6 @@ func parseWd(dir string) string {
 func parseCommand(ccmd *cobra.Command, args []string) {
 	startTime := time.Now()
 
-	pythonPath, err := ccmd.Flags().GetString("python")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
 	dir, err := ccmd.Flags().GetString("dir")
 	if err != nil {
 		log.Fatal(err.Error())
@@ -91,7 +104,6 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err.Error())
 	}
 
-	// parse the dir to an absolute path
 	dir, err = filepath.Abs(dir)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -99,56 +111,119 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 
 	dir = parseWd(dir)
 
-	Parse(dir, pythonPath, indent)
+	Parse(dir, indent)
 	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
 }
 
-// loading data
-func rootCommand(ccmd *cobra.Command, args []string) {
-	var beta bool
-	var err error
-
-	startTime := time.Now()
-
-	// get beta or set to false if not set
-	beta, err = ccmd.Flags().GetBool("beta")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	manifest, err := ccmd.Flags().GetString("manifest")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
+func watchdogCommand(ccmd *cobra.Command, args []string) {
 	dir, err := ccmd.Flags().GetString("dir")
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	dir = parseWd(dir)
 
-	pythonPath, err := ccmd.Flags().GetString("python")
+	gameRelease, err := ccmd.Flags().GetString("release")
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Fprintln(os.Stderr, err)
 	}
+
+	hook, err := ccmd.Flags().GetString("hook")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	authHeader, err := ccmd.Flags().GetString("auth-header")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	versionFilePath, err := ccmd.Flags().GetString("path")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	if versionFilePath == "" {
+		versionFilePath = filepath.Join(dir, "version", "version.json")
+	}
+
+	customBodyPath, err := ccmd.Flags().GetString("body")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	deadlyHook, err := ccmd.Flags().GetBool("deadly-hook")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	initialHook, err := ccmd.Flags().GetBool("initial-hook")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	volatile, err := ccmd.Flags().GetBool("volatile")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	interval, err := ccmd.Flags().GetUint32("interval")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	watchdogEnd := make(chan bool)
+	if interval == 0 {
+		watchdogTick(watchdogEnd, nil, dir, gameRelease, versionFilePath, customBodyPath, volatile, &initialHook, hook, authHeader, deadlyHook)
+		close(watchdogEnd)
+	} else {
+		ticker := time.NewTicker(time.Duration(interval) * time.Minute)
+		go func(initialHook *bool) {
+			for range ticker.C {
+				watchdogTick(watchdogEnd, ticker, dir, gameRelease, versionFilePath, customBodyPath, volatile, initialHook, hook, authHeader, deadlyHook)
+			}
+		}(&initialHook)
+		log.Info("🐶 spawned")
+		<-watchdogEnd
+		ticker.Stop()
+		log.Info("👋 Bye!")
+	}
+}
+
+func rootCommand(ccmd *cobra.Command, args []string) {
+	var err error
+
+	startTime := time.Now()
+
+	gameRelease, err := ccmd.Flags().GetString("release")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	manifest, err := ccmd.Flags().GetString("manifest")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	dir, err := ccmd.Flags().GetString("dir")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	dir = parseWd(dir)
 
 	worker, err := ccmd.Flags().GetInt("workers")
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	ignore, err := ccmd.Flags().GetStringArray("ignore")
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Fprintln(os.Stderr, err)
 	}
 
-	fmt.Printf("beta: %t\n", beta)
-	fmt.Printf("dir: %s\n", dir)
-	fmt.Printf("python: %s\n", pythonPath)
-	fmt.Println("")
-
-	err = Download(beta, dir, pythonPath, manifest, worker, ignore)
+	isBeta := gameRelease == "beta"
+	err = Download(isBeta, dir, manifest, worker, ignore)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
