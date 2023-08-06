@@ -99,6 +99,11 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	gameRelease, err := ccmd.Flags().GetString("release")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	persistenceDir, err := ccmd.Flags().GetString("persistence-dir")
 	if err != nil {
 		log.Fatal(err)
@@ -125,7 +130,7 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 	} else {
 		indentation = ""
 	}
-	mapping.Parse(dir, indentation, persistenceDir)
+	mapping.Parse(dir, indentation, persistenceDir, gameRelease)
 	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
 }
 

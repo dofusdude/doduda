@@ -52,25 +52,25 @@ func Values[M ~map[K]V, K comparable, V any](m M) []V {
 	return r
 }
 
-func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string, indent string) {
+func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string) {
 	arr := Values(mounts.Mounts)
 	workerSlices := PartitionSlice(arr, worker)
 
 	wg := sync.WaitGroup{}
 	for _, workerSlice := range workerSlices {
 		wg.Add(1)
-		go func(workerSlice []mapping.JSONGameMount, dir string, indent string) {
+		go func(workerSlice []mapping.JSONGameMount, dir string) {
 			defer wg.Done()
-			DownloadMountImageWorker(hashJson, "main", dir, workerSlice, indent)
-		}(workerSlice, dir, indent)
+			DownloadMountImageWorker(hashJson, "main", dir, workerSlice)
+		}(workerSlice, dir)
 	}
 	wg.Wait()
 }
 
-func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount, indent string) {
-	wg := sync.WaitGroup{}
-
+func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount) {
 	for _, mount := range workerSlice {
+		wg := sync.WaitGroup{}
+
 		wg.Add(1)
 		go func(mountId int, wg *sync.WaitGroup, dir string) {
 			defer wg.Done()
@@ -78,10 +78,9 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, di
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
 			outPath := filepath.Join(dir, "data", "img", "mount")
-			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, true, indent)
+			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false, "")
 		}(mount.Id, &wg, dir)
 
-		//  Missing bundle for content/gfx/mounts/162.swf
 		wg.Add(1)
 		go func(mountId int, wg *sync.WaitGroup, dir string) {
 			defer wg.Done()
@@ -89,11 +88,11 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, di
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
 			outPath := filepath.Join(dir, "data", "vector", "mount")
-			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false, indent)
+			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false, "")
 		}(mount.Id, &wg, dir)
-	}
 
-	wg.Wait()
+		wg.Wait()
+	}
 }
 
 func GetLatestLauncherVersion(beta bool) string {
@@ -303,7 +302,7 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		log.Info("Parsing for missing mount images...")
 		gamedata := mapping.ParseRawData(dir)
 		log.Info("Downloading mount images...")
-		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, indent)
+		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir)
 		log.Info("... mount images downloaded")
 	}
 
