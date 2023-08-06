@@ -4,7 +4,6 @@ on:
     workflow_dispatch:
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -25,5 +24,5 @@ jobs:
         git config --global user.name 'stelzo'
         git config --global user.email 'stelzo@users.noreply.github.com'
         git add persistent
-        git commit -m "Update persistent files"
+        git commit -m "update persistent files" || true
         git push
