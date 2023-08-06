@@ -12,6 +12,8 @@ github.com/dofusdude/dodumap v0.0.0-20230805084437-382643434935 h1:nTFH5zEXHt9XK
 github.com/dofusdude/dodumap v0.0.0-20230805084437-382643434935/go.mod h1:HcIpovf107gqKg4QFL15D2iYp9rW3lnzw51z3hrJM1I=
 github.com/dofusdude/dodumap v0.0.0-20230805192614-1d7f2d55885a h1:yO3cTnVekGTaaJYkO8k1zYWtohNQMR85408Rp6U83vQ=
 github.com/dofusdude/dodumap v0.0.0-20230805192614-1d7f2d55885a/go.mod h1:HcIpovf107gqKg4QFL15D2iYp9rW3lnzw51z3hrJM1I=
+github.com/dofusdude/dodumap v0.0.0-20230806105544-9246bb12e42b h1:KAmRMvE/iEB5leeG+lUKwO2Ah4FU58Vh24mbj25Et64=
+github.com/dofusdude/dodumap v0.0.0-20230806105544-9246bb12e42b/go.mod h1:HcIpovf107gqKg4QFL15D2iYp9rW3lnzw51z3hrJM1I=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/go-logfmt/logfmt v0.6.0 h1:wGYYu3uicYdqXVgoYbvnkrPVXkuLM1p1ifugDMEdRi4=

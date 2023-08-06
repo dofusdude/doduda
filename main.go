@@ -49,6 +49,7 @@ func main() {
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'images', 'mountsimages'.")
 	rootCmd.PersistentFlags().BoolP("indent", "I", false, "Indent the JSON output (increases file size)")
 
+	parseCmd.Flags().String("persistence-dir", "", "Use this directory for persistent data that can be changed while parsing after version updates.")
 	rootCmd.AddCommand(parseCmd)
 
 	watchdogCmd.Flags().StringP("hook", "H", "", "Hook URL to send a POST request to when a change is detected.")
@@ -98,6 +99,12 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	persistenceDir, err := ccmd.Flags().GetString("persistence-dir")
+	if err != nil {
+		log.Fatal(err)
+	}
+	persistenceDir = parseWd(persistenceDir)
+
 	indent, err := ccmd.Flags().GetBool("indent")
 	if err != nil {
 		log.Fatal(err)
@@ -116,7 +123,7 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 	} else {
 		indentation = ""
 	}
-	mapping.Parse(dir, indentation)
+	mapping.Parse(dir, indentation, persistenceDir)
 	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
 }
 
