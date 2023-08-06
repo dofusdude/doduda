@@ -37,5 +37,5 @@ jobs:
     - 
       name: Notify repository
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ secrets.PAT }}
       run: gh workflow run release --repo dofusdude/dofus2-${{ github.event.inputs.release }} -f version=${{ github.event.inputs.version }}
