@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/charmbracelet/log v0.2.3
 	github.com/dofusdude/ankabuffer v0.0.8
-	github.com/dofusdude/dodumap v0.0.0-20230806105544-9246bb12e42b
+	github.com/dofusdude/dodumap v0.0.3
 	github.com/spf13/cobra v1.7.0
 	github.com/xhhuango/json v1.19.0
 )

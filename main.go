@@ -103,7 +103,9 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	persistenceDir = parseWd(persistenceDir)
+	if persistenceDir != "" {
+		persistenceDir = parseWd(persistenceDir)
+	}
 
 	indent, err := ccmd.Flags().GetBool("indent")
 	if err != nil {
