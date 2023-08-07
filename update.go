@@ -246,7 +246,7 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		}
 		os.WriteFile(manifestSearchPath, marshalledBytes, os.ModePerm)
 	} else {
-		log.Infof("Using manifest file %s", manifestPath)
+		log.Info("Using cached manifest")
 		manifestFile, err := os.Open(manifestPath)
 		if err != nil {
 			log.Fatal(err)
