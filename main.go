@@ -56,10 +56,10 @@ func main() {
 	watchdogCmd.Flags().String("auth-header", "", "Authorization header if required for the POST request. Example 'Bearer 12345'")
 	watchdogCmd.Flags().String("path", "", "Filepath for json version persistence. Defaults to `${dir}/.version.json`.")
 	watchdogCmd.Flags().String("body", "", "Filepath to a custom message body for the hook. Available variables ${release}, ${oldVersion}, ${newVersion}.")
-	watchdogCmd.Flags().Bool("initial-hook", false, "Notify immediatly after checking the version after first timer event, even at first startup.")
+	watchdogCmd.Flags().Bool("initial-hook", false, "Notify immediately after checking the version after first timer event, even at first startup.")
 	watchdogCmd.Flags().Bool("volatile", false, "Controls writing the persistence file. Enabling it will trigger the hook every time the trigger fires.")
 	watchdogCmd.Flags().Bool("deadly-hook", false, "End process after first successful notification.")
-	watchdogCmd.Flags().Uint32("interval", 5, "Interval in minutes to check for new versions. 0 will tick once immediatly and then exit.")
+	watchdogCmd.Flags().Uint32("interval", 5, "Interval in minutes to check for new versions. 0 will tick once immediately and then exit.")
 	rootCmd.AddCommand(watchdogCmd)
 
 	err := rootCmd.Execute()
