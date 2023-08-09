@@ -6,7 +6,7 @@
   </p>
 </p>
 
-Download the latest Dofus 2 game data from Ankama servers and convert the interesting parts to an encyclopedia-like format.
+Download the latest Dofus 2 version from Ankama and convert the interesting parts to a developer friendly format.
 ```bash
 doduda && doduda map
 ```
