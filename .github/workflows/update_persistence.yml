@@ -20,15 +20,15 @@ jobs:
       name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: '1.21'
     - 
       name: Build
       run: go build -v .
     - 
       name: Run and Update
       run: |
-        ./doduda --ignore mountsimages --ignore images --release ${{ github.event.inputs.release }}
-        ./doduda parse --persistence-dir persistent
+        ./doduda --headless --ignore mountsimages --ignore itemsimages --release ${{ github.event.inputs.release }}
+        ./doduda map --persistence-dir persistent
         git config --global user.name 'stelzo'
         git config --global user.email 'stelzo@users.noreply.github.com'
         git add persistent

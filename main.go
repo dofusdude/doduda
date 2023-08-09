@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
-	mapping "github.com/dofusdude/dodumap"
+	"github.com/dofusdude/doduda/ui"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -23,12 +24,12 @@ var (
 	}
 
 	parseCmd = &cobra.Command{
-		Use:           "parse",
-		Short:         "Parse and map the raw data downloaded data for to be more easily consumable.",
+		Use:           "map",
+		Short:         "Parse and map the unpacked data for to be more easily consumable by applications.",
 		Long:          ``,
 		SilenceErrors: true,
 		SilenceUsage:  false,
-		Run:           parseCommand,
+		Run:           mapCommand,
 	}
 
 	watchdogCmd = &cobra.Command{
@@ -42,11 +43,16 @@ var (
 )
 
 func main() {
+	viper.SetDefault("LOG_LEVEL", "warn")
+	viper.AutomaticEnv()
+	log.SetLevel(log.ParseLevel(viper.GetString("LOG_LEVEL")))
+
+	rootCmd.PersistentFlags().Bool("headless", false, "Run without a TUI.")
 	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. Available: 'main', 'beta'.")
 	rootCmd.PersistentFlags().StringP("dir", "d", ".", "Working directory")
 	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
-	rootCmd.PersistentFlags().IntP("workers", "j", 2, "Number of workers to use for downloading.")
-	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'images', 'mountsimages'.")
+	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
+	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'itemsimages', 'mountsimages'.")
 	rootCmd.PersistentFlags().BoolP("indent", "I", false, "Indent the JSON output (increases file size)")
 
 	parseCmd.Flags().String("persistence-dir", "", "Use this directory for persistent data that can be changed while parsing after version updates.")
@@ -91,9 +97,7 @@ func parseWd(dir string) string {
 	return dir
 }
 
-func parseCommand(ccmd *cobra.Command, args []string) {
-	startTime := time.Now()
-
+func mapCommand(ccmd *cobra.Command, args []string) {
 	dir, err := ccmd.Flags().GetString("dir")
 	if err != nil {
 		log.Fatal(err)
@@ -124,14 +128,18 @@ func parseCommand(ccmd *cobra.Command, args []string) {
 
 	dir = parseWd(dir)
 
+	headless, err := ccmd.Flags().GetBool("headless")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	var indentation string
 	if indent {
 		indentation = "  "
 	} else {
 		indentation = ""
 	}
-	mapping.Parse(dir, indentation, persistenceDir, gameRelease)
-	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
+	Map(dir, indentation, persistenceDir, gameRelease, headless)
 }
 
 func watchdogCommand(ccmd *cobra.Command, args []string) {
@@ -202,17 +210,15 @@ func watchdogCommand(ccmd *cobra.Command, args []string) {
 				watchdogTick(watchdogEnd, ticker, dir, gameRelease, versionFilePath, customBodyPath, volatile, initialHook, hook, authHeader, deadlyHook)
 			}
 		}(&initialHook)
-		log.Info("🐶 spawned")
+
+		fmt.Println(ui.DotStyle.Render("Watchdog started 🐶"))
 		<-watchdogEnd
 		ticker.Stop()
-		log.Info("👋 Bye!")
 	}
 }
 
 func rootCommand(ccmd *cobra.Command, args []string) {
 	var err error
-
-	startTime := time.Now()
 
 	gameRelease, err := ccmd.Flags().GetString("release")
 	if err != nil {
@@ -236,12 +242,17 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 
 	dir = parseWd(dir)
 
-	worker, err := ccmd.Flags().GetInt("workers")
+	workers, err := ccmd.Flags().GetInt("mount-image-workers")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	ignore, err := ccmd.Flags().GetStringArray("ignore")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	headless, err := ccmd.Flags().GetBool("headless")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -253,10 +264,8 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 	} else {
 		indentation = ""
 	}
-	err = Download(isBeta, dir, manifest, worker, ignore, indentation)
+	err = Download(isBeta, dir, manifest, workers, ignore, indentation, headless)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-
-	fmt.Printf("🎉 Done! %.2fs\n", time.Since(startTime).Seconds())
 }

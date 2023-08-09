@@ -3,14 +3,16 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/charmbracelet/log"
 
 	"github.com/dofusdude/ankabuffer"
+	"github.com/dofusdude/doduda/ui"
 	"github.com/dofusdude/doduda/unpack"
 )
 
-func unpackD2pFolder(inPath string, outPath string) {
+func unpackD2pFolder(title string, inPath string, outPath string, headless bool) {
 	files := []string{}
 	filepath.Walk(inPath, func(path string, info os.FileInfo, err error) error {
 		if filepath.Ext(path) == ".d2p" {
@@ -22,6 +24,14 @@ func unpackD2pFolder(inPath string, outPath string) {
 	if _, err := os.Stat(outPath); os.IsNotExist(err) {
 		os.MkdirAll(outPath, os.ModePerm)
 	}
+
+	updateProgress := make(chan bool, len(files))
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ui.Progress("Unpack "+title, len(files), updateProgress, 0, true, headless)
+	}()
 
 	for _, file := range files {
 		f, err := os.Open(file)
@@ -48,12 +58,17 @@ func unpackD2pFolder(inPath string, outPath string) {
 			if err != nil {
 				log.Fatal(err)
 			}
+			if isChannelClosed(updateProgress) {
+				os.Exit(1)
+			}
 		}
-
+		updateProgress <- true
 	}
+
+	wg.Wait()
 }
 
-func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string) error {
+func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string, headless bool) error {
 	fileNames := []HashFile{
 		{Filename: "content/gfx/items/bitmap0.d2p", FriendlyName: "bitmaps_0.d2p"},
 		{Filename: "content/gfx/items/bitmap0_1.d2p", FriendlyName: "bitmaps_1.d2p"},
@@ -64,11 +79,11 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string) error {
 
 	inPath := filepath.Join(dir, "data", "tmp")
 	outPath := filepath.Join(dir, "data", "img", "item")
-	if err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, inPath, false, ""); err != nil {
+	if err := DownloadUnpackFiles("Item Bitmaps", hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
 		return err
 	}
 
-	unpackD2pFolder(inPath, outPath)
+	unpackD2pFolder("Item Bitmaps", inPath, outPath, headless)
 
 	fileNames = []HashFile{
 		{Filename: "content/gfx/items/vector0.d2p", FriendlyName: "vector_0.d2p"},
@@ -80,11 +95,11 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string) error {
 
 	inPath = filepath.Join(dir, "data", "tmp", "vector")
 	outPath = filepath.Join(dir, "data", "vector", "item")
-	if err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, inPath, false, ""); err != nil {
+	if err := DownloadUnpackFiles("Item Vectors", hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
 		return err
 	}
 
-	unpackD2pFolder(inPath, outPath)
+	unpackD2pFolder("Item Vectors", inPath, outPath, headless)
 
 	return nil
 }

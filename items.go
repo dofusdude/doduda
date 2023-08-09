@@ -3,12 +3,10 @@ package main
 import (
 	"path/filepath"
 
-	"github.com/charmbracelet/log"
 	"github.com/dofusdude/ankabuffer"
 )
 
-func DownloadItems(hashJson *ankabuffer.Manifest, dir string, indent string) error {
-	log.Info("Downloading items...")
+func DownloadItems(hashJson *ankabuffer.Manifest, dir string, indent string, headless bool) error {
 	fileNames := []HashFile{
 		{Filename: "data/common/Items.d2o", FriendlyName: "items.d2o"},
 		{Filename: "data/common/ItemTypes.d2o", FriendlyName: "item_types.d2o"},
@@ -39,8 +37,8 @@ func DownloadItems(hashJson *ankabuffer.Manifest, dir string, indent string) err
 	}
 
 	outPath := filepath.Join(dir, "data")
-	err := DownloadUnpackFiles(hashJson, "main", fileNames, dir, outPath, true, indent)
 
-	log.Info("... downloaded items")
+	err := DownloadUnpackFiles("Items", hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
+
 	return err
 }

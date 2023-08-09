@@ -14,6 +14,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/dofusdude/ankabuffer"
+	"github.com/dofusdude/doduda/ui"
 	"github.com/dofusdude/doduda/unpack"
 	mapping "github.com/dofusdude/dodumap"
 	jsnan "github.com/xhhuango/json"
@@ -52,47 +53,75 @@ func Values[M ~map[K]V, K comparable, V any](m M) []V {
 	return r
 }
 
-func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string) {
+func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string, headless bool) {
 	arr := Values(mounts.Mounts)
 	workerSlices := PartitionSlice(arr, worker)
 
 	wg := sync.WaitGroup{}
-	for _, workerSlice := range workerSlices {
+	for i, workerSlice := range workerSlices {
 		wg.Add(1)
-		go func(workerSlice []mapping.JSONGameMount, dir string) {
+		go func(workerSlice []mapping.JSONGameMount, dir string, id int) {
 			defer wg.Done()
-			DownloadMountImageWorker(hashJson, "main", dir, workerSlice)
-		}(workerSlice, dir)
+			if headless {
+				log.Print(ui.TitleStyle.Render("Mount Worker"), "id", id, "jobs", len(workerSlice), "state", "spawned")
+			}
+			DownloadMountImageWorker(hashJson, "main", dir, workerSlice, headless)
+			if headless {
+				log.Print(ui.TitleStyle.Render("Mount Worker"), "id", id, "jobs", len(workerSlice), "state", "finished")
+			}
+		}(workerSlice, dir, i)
 	}
 	wg.Wait()
 }
 
-func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount) {
+func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount, headless bool) {
+	workerUpdates := make(chan bool, len(workerSlice))
+	var feedbackWg sync.WaitGroup
+	feedbackWg.Add(1)
+	go func() {
+		defer feedbackWg.Done()
+		ui.Progress("Mount Images", len(workerSlice)*2, workerUpdates, 0, false, headless)
+	}()
+
 	for _, mount := range workerSlice {
 		wg := sync.WaitGroup{}
 
 		wg.Add(1)
 		go func(mountId int, wg *sync.WaitGroup, dir string) {
-			defer wg.Done()
+			defer func() {
+				defer wg.Done()
+				if isChannelClosed(workerUpdates) {
+					os.Exit(1)
+				}
+				workerUpdates <- true
+			}()
 			var image HashFile
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
 			outPath := filepath.Join(dir, "data", "img", "mount")
-			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false, "")
+			_ = DownloadUnpackFiles("Mount Bitmaps", manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
 		}(mount.Id, &wg, dir)
 
 		wg.Add(1)
 		go func(mountId int, wg *sync.WaitGroup, dir string) {
-			defer wg.Done()
+			defer func() {
+				defer wg.Done()
+				if isChannelClosed(workerUpdates) {
+					os.Exit(1)
+				}
+				workerUpdates <- true
+			}()
 			var image HashFile
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
 			outPath := filepath.Join(dir, "data", "vector", "mount")
-			_ = DownloadUnpackFiles(manifest, fragment, []HashFile{image}, dir, outPath, false, "")
+			_ = DownloadUnpackFiles("Mount Vectors", manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
 		}(mount.Id, &wg, dir)
 
 		wg.Wait()
 	}
+
+	feedbackWg.Wait()
 }
 
 func GetLatestLauncherVersion(beta bool) string {
@@ -166,7 +195,6 @@ func CreateDataDirectoryStructure(dir string) {
 }
 
 func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manifest, error) {
-	log.Info("Downloading release manifest...")
 	var gameVersionType string
 	if beta {
 		gameVersionType = "beta"
@@ -188,8 +216,6 @@ func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manif
 
 	fileHashes := *ankabuffer.ParseManifest(hashBody)
 
-	log.Info("... release manifest downloaded")
-
 	return fileHashes, nil
 }
 
@@ -202,12 +228,24 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
-func Download(beta bool, dir string, manifest string, mountsWorker int, ignore []string, indent string) error {
-	CleanUp(dir)
+func Download(beta bool, dir string, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
 	CreateDataDirectoryStructure(dir)
 
 	var ankaManifest ankabuffer.Manifest
 	manifestSearchPath := "manifest.json"
+
+	var manifestWg sync.WaitGroup
+	feedbacks := make(chan string)
+	manifestWg.Add(1)
+	go func() {
+		defer manifestWg.Done()
+		ui.Spinner("Manifest", feedbacks, false, headless)
+	}()
+
+	if isChannelClosed(feedbacks) {
+		os.Exit(1)
+	}
+	feedbacks <- "Loading"
 
 	var manifestPath string
 	if manifest == "" {
@@ -246,7 +284,7 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		}
 		os.WriteFile(manifestSearchPath, marshalledBytes, os.ModePerm)
 	} else {
-		log.Info("Using cached manifest")
+		log.Debug("Using cached manifest")
 		manifestFile, err := os.Open(manifestPath)
 		if err != nil {
 			log.Fatal(err)
@@ -262,48 +300,35 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Info("... manifest loaded")
 	}
 
-	var waitGrp sync.WaitGroup
+	close(feedbacks)
+	manifestWg.Wait()
+
 	if !contains(ignore, "languages") {
-		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string) {
-			defer waitGrp.Done()
-			if err := DownloadLanguages(manifest, dir, indent); err != nil {
-				log.Fatal(err)
-			}
-		}(&ankaManifest, dir)
-	}
-
-	if !contains(ignore, "images") {
-		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string) {
-			defer waitGrp.Done()
-			if err := DownloadImagesLauncher(manifest, dir); err != nil {
-				log.Fatal(err)
-			}
-		}(&ankaManifest, dir)
+		if err := DownloadLanguages(&ankaManifest, dir, indent, headless); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if !contains(ignore, "items") {
-		waitGrp.Add(1)
-		go func(manifest *ankabuffer.Manifest, dir string, indent string) {
-			defer waitGrp.Done()
-			if err := DownloadItems(manifest, dir, indent); err != nil {
-				log.Fatal(err)
-			}
-		}(&ankaManifest, dir, indent)
+		if err := DownloadItems(&ankaManifest, dir, indent, headless); err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	waitGrp.Wait()
+	if !contains(ignore, "itemsimages") {
+		if err := DownloadImagesLauncher(&ankaManifest, dir, headless); err != nil {
+			log.Fatal(err)
+		}
+	}
 
-	if !contains(ignore, "mountsimages") {
-		log.Info("Parsing for missing mount images...")
+	if !contains(ignore, "mountsimages") && !contains(ignore, "items") {
 		gamedata := mapping.ParseRawData(dir)
-		log.Info("Downloading mount images...")
-		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir)
-		log.Info("... mount images downloaded")
+		if !headless {
+			mountsWorker = 1
+		}
+		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, headless)
 	}
 
 	os.RemoveAll(fmt.Sprintf("%s/data/tmp", dir))
@@ -329,10 +354,6 @@ func DownloadBundle(bundleHash string) ([]byte, error) {
 	}
 
 	return body, nil
-}
-
-func CleanUp(dir string) {
-	os.RemoveAll(fmt.Sprintf("%s/data", dir))
 }
 
 func Unpack(file string, dir string, destDir string, indent string) {
@@ -413,7 +434,30 @@ func Unpack(file string, dir string, destDir string, indent string) {
 	}
 }
 
-func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string) error {
+func isChannelClosed[T any](ch chan T) bool {
+	select {
+	case _, ok := <-ch:
+		if !ok {
+			return true
+		}
+	default:
+	}
+
+	return false
+}
+
+func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string, silent bool, muteSpinner bool) error {
+	feedbacks := make(chan string)
+
+	var feedbackWg sync.WaitGroup
+	if !muteSpinner {
+		feedbackWg.Add(1)
+		go func() {
+			defer feedbackWg.Done()
+			ui.Spinner(title, feedbacks, true, silent)
+		}()
+	}
+
 	var filesToDownload []ankabuffer.File
 	for i, file := range toDownload {
 		if manifest.Fragments[fragment].Files[file.Filename].Name == "" {
@@ -421,6 +465,10 @@ func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownl
 		}
 		filesToDownload = append(filesToDownload, manifest.Fragments[fragment].Files[file.Filename])
 		toDownload[i].Hash = manifest.Fragments[fragment].Files[file.Filename].Hash
+	}
+
+	if !muteSpinner {
+		feedbacks <- "finding bundles"
 	}
 
 	bundles := ankabuffer.GetNeededBundles(filesToDownload)
@@ -433,7 +481,15 @@ func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownl
 
 	if len(bundles) == 0 {
 		log.Warn("No bundles to download")
+		if !muteSpinner {
+			close(feedbacks)
+			feedbackWg.Wait()
+		}
 		return nil
+	}
+
+	if !muteSpinner {
+		feedbacks <- "mapping bundles"
 	}
 
 	bundlesMap := ankabuffer.GetBundleHashMap(manifest)
@@ -443,24 +499,44 @@ func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownl
 		Data       []byte
 	}
 
-	//bundleData := make(chan DownloadedBundle, len(bundles))
 	bundlesBuffer := make(map[string]DownloadedBundle)
 
+	if !muteSpinner {
+		feedbacks <- "loading bundles"
+		close(feedbacks)
+	}
+	feedbackWg.Wait()
+
+	bundleUpdates := make(chan bool, len(bundles))
+	feedbackWg.Add(1)
+	go func() {
+		defer feedbackWg.Done()
+		ui.Progress(title, len(bundles)+1, bundleUpdates, 0, false, silent)
+	}()
+
 	for _, bundle := range bundles {
-		//go func(bundleHash string, data chan DownloadedBundle) {
 		bundleData, err := DownloadBundle(bundle)
 		if err != nil {
 			return fmt.Errorf("could not download bundle %s: %s", bundle, err)
 		}
 		res := DownloadedBundle{BundleHash: bundle, Data: bundleData}
 		bundlesBuffer[bundle] = res
+		if isChannelClosed(bundleUpdates) {
+			os.Exit(1)
+		}
+		bundleUpdates <- true
 	}
 
-	var wg sync.WaitGroup
-	for i, file := range filesToDownload {
+	filteredFilesToDownload := make([]ankabuffer.File, 0)
+	for _, file := range filesToDownload {
 		if file.Name == "" {
 			continue
 		}
+		filteredFilesToDownload = append(filteredFilesToDownload, file)
+	}
+
+	var wg sync.WaitGroup
+	for i, file := range filteredFilesToDownload {
 		wg.Add(1)
 		go func(file ankabuffer.File, bundlesBuffer map[string]DownloadedBundle, dir string, destDir string, i int) {
 			defer wg.Done()
@@ -545,5 +621,11 @@ func DownloadUnpackFiles(manifest *ankabuffer.Manifest, fragment string, toDownl
 	}
 
 	wg.Wait()
+
+	if !isChannelClosed(bundleUpdates) {
+		bundleUpdates <- true
+	}
+
+	feedbackWg.Wait()
 	return nil
 }
