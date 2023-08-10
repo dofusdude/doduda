@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"path/filepath"
@@ -40,6 +42,16 @@ var (
 		SilenceUsage:  false,
 		Run:           watchdogCommand,
 	}
+
+	renderCmd = &cobra.Command{
+		Use:           "render <input-dir> <output-dir> <resolution>",
+		Short:         "Renders .swf files to specific resolutions.",
+		Long:          ``,
+		SilenceErrors: true,
+		SilenceUsage:  false,
+		Run:           renderCommand,
+		Args:          cobra.ExactArgs(3),
+	}
 )
 
 func main() {
@@ -68,9 +80,62 @@ func main() {
 	watchdogCmd.Flags().Uint32("interval", 5, "Interval in minutes to check for new versions. 0 will tick once immediately and then exit.")
 	rootCmd.AddCommand(watchdogCmd)
 
+	renderCmd.Flags().String("incremental", "", "Start from the last version and only render missing images. The format must be <owner>/<repo>/<filename>")
+	rootCmd.AddCommand(renderCmd)
+
 	err := rootCmd.Execute()
 	if err != nil && err.Error() != "" {
 		fmt.Fprintln(os.Stderr, err)
+	}
+}
+
+func renderCommand(ccmd *cobra.Command, args []string) {
+	var err error
+
+	inputDir := args[0]
+	inputDir, err = filepath.Abs(inputDir)
+	if err != nil {
+		log.Fatal("Invalid input directory")
+	}
+
+	outputDir := args[1]
+	outputDir, err = filepath.Abs(outputDir)
+	if err != nil {
+		log.Fatal("Invalid input directory")
+	}
+
+	err = os.MkdirAll(outputDir, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resolution, err := strconv.Atoi(args[2])
+	if err != nil {
+		log.Fatal("Invalid resolution")
+	}
+
+	headless, err := ccmd.Flags().GetBool("headless")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	incremental, err := ccmd.Flags().GetString("incremental")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var incrementalParts []string
+	if incremental != "" {
+
+		incrementalParts = strings.Split(incremental, "/")
+		if len(incrementalParts) != 3 {
+			log.Fatal("Invalid incremental format. Expected <owner>/<repo>/<filename>. The filename is the exact name from the latest release without extension, that must be .tar.gz.")
+		}
+	}
+
+	err = Render(inputDir, outputDir, incrementalParts, resolution, headless)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
