@@ -57,16 +57,8 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
 	}
-	updatesChan <- "Items"
+	updatesChan <- "Game data"
 	gameData = mapping.ParseRawData(dir)
-
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	updatesChan <- "Items " + ui.HelpStyle("mapping")
-	mappedItems := mapping.MapItems(gameData, &languageData)
-	mappedItemPath := filepath.Join(dir, "data", "MAPPED_ITEMS.json")
-	marshalSave(mappedItems, mappedItemPath, indent)
 
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
@@ -77,7 +69,23 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
 	}
-	updatesChan <- "Mounts " + ui.HelpStyle("mapping")
+	if headless {
+		updatesChan <- "Items mapping"
+	} else {
+		updatesChan <- "Items " + ui.HelpStyle("mapping")
+	}
+	mappedItems := mapping.MapItems(gameData, &languageData)
+	mappedItemPath := filepath.Join(dir, "data", "MAPPED_ITEMS.json")
+	marshalSave(mappedItems, mappedItemPath, indent)
+
+	if isChannelClosed(updatesChan) {
+		os.Exit(1)
+	}
+	if headless {
+		updatesChan <- "Mounts mapping"
+	} else {
+		updatesChan <- "Mounts " + ui.HelpStyle("mapping")
+	}
 	mappedMounts := mapping.MapMounts(gameData, &languageData)
 	mappedMountsPath := filepath.Join(dir, "data", "MAPPED_MOUNTS.json")
 	marshalSave(mappedMounts, mappedMountsPath, indent)
@@ -93,7 +101,11 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
 	}
-	updatesChan <- "Recipes " + ui.HelpStyle("mapping")
+	if headless {
+		updatesChan <- "Recipes mapping"
+	} else {
+		updatesChan <- "Recipes " + ui.HelpStyle("mapping")
+	}
 	mappedRecipes := mapping.MapRecipes(gameData)
 	mappedRecipesPath := filepath.Join(dir, "data", "MAPPED_RECIPES.json")
 	marshalSave(mappedRecipes, mappedRecipesPath, indent)
