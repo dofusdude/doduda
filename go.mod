@@ -5,8 +5,8 @@ go 1.18
 require (
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
-	github.com/charmbracelet/lipgloss v0.7.1
-	github.com/charmbracelet/log v0.2.3
+	github.com/charmbracelet/lipgloss v0.8.0
+	github.com/charmbracelet/log v0.2.4
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/dofusdude/ankabuffer v0.0.8
 	github.com/dofusdude/dodumap v0.1.0
