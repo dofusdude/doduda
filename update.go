@@ -388,7 +388,12 @@ func Unpack(file string, dir string, destDir string, indent string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer f.Close()
+		defer func() {
+			err := f.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 
 		reader, err := unpack.NewD2OReader(f)
 		if err != nil {
@@ -407,7 +412,10 @@ func Unpack(file string, dir string, destDir string, indent string) {
 		}
 		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
 
-		os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if suffix == "d2i" {
@@ -415,7 +423,12 @@ func Unpack(file string, dir string, destDir string, indent string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer f.Close()
+		defer func() {
+			err := f.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 
 		data := unpack.NewD2I(f).Read()
 
@@ -430,7 +443,10 @@ func Unpack(file string, dir string, destDir string, indent string) {
 		}
 		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
 
-		os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -598,25 +614,35 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 
 			offlineFilePath := filepath.Join(destDir, toDownload[i].FriendlyName)
 
-			fp, err := os.Create(offlineFilePath)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer fp.Close()
-			_, err = fp.Write(fileData)
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
+			// anonymous function to safely defer closing file
+			func() {
+				fp, err := os.Create(offlineFilePath)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer func() {
+					err := fp.Close()
+					if err != nil {
+						log.Fatal(err)
+					}
+				}()
+				_, err = fp.Write(fileData)
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
+			}()
+
 			log.Infof("%s ✅", filepath.Base(file.Name))
 
 			if unpack {
 				Unpack(offlineFilePath, dir, destDir, indent)
-				err = os.Remove(offlineFilePath)
+				err := os.Remove(offlineFilePath)
 				if err != nil {
 					log.Fatal(err)
 				}
 			}
+
 		}(file, bundlesBuffer, dir, destDir, i)
 	}
 
