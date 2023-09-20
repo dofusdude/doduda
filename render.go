@@ -156,7 +156,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 			filepath.Join("data", swfFile.Name()),
 			filepath.Join("data", svgFileName),
 		}
-		log.Print(cmd)
+
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image: "stelzo/swf-to-svg",
 			Cmd:   cmd,
@@ -189,7 +189,6 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 			filepath.Join("data", resultFileName),
 			strconv.Itoa(resolution),
 		}
-		log.Print(cmd)
 
 		resp, err = cli.ContainerCreate(ctx, &container.Config{
 			Image: "stelzo/svg-to-png",
