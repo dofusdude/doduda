@@ -45,11 +45,17 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 	updateChan <- "Pulling image"
 
 	ctx := context.Background()
-	reader, err := cli.ImagePull(ctx, "stelzo/swf-renderer", types.ImagePullOptions{})
+	swfToSvg, err := cli.ImagePull(ctx, "stelzo/swf-to-svg", types.ImagePullOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	reader.Close()
+	swfToSvg.Close()
+
+	svgToPng, err := cli.ImagePull(ctx, "stelzo/svg-to-png", types.ImagePullOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	svgToPng.Close()
 
 	swfFiles, err := os.ReadDir(inputDir)
 	if err != nil {
@@ -132,6 +138,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 		}
 
 		rawFileName := strings.TrimSuffix(swfFile.Name(), ".swf")
+		svgFileName := fmt.Sprintf("%s.svg", rawFileName)
 		resultFileName := fmt.Sprintf("%s-%d.png", rawFileName, resolution)
 
 		absInputPath := filepath.Join(inputDir, swfFile.Name())
@@ -146,21 +153,18 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 		mountPath := filepath.Dir(absInputPath)
 
 		cmd := []string{
-			"--screenshot", "last", "--screenshot-file", resultFileName,
-			"-1", "-r1",
-			"--width", strconv.Itoa(resolution),
-			"--height", strconv.Itoa(resolution),
-			swfFile.Name(),
+			filepath.Join("data", swfFile.Name()),
+			filepath.Join("data", svgFileName),
 		}
+		log.Print(cmd)
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
-			Image:      "stelzo/swf-renderer",
-			Cmd:        cmd,
-			Entrypoint: []string{"/usr/local/bin/dump-gnash"},
+			Image: "stelzo/swf-to-svg",
+			Cmd:   cmd,
 			Volumes: map[string]struct{}{
-				"/home/developer": {},
+				"/app/data": {},
 			},
 		}, &container.HostConfig{
-			Binds:      []string{fmt.Sprintf("%s:/home/developer", mountPath)},
+			Binds:      []string{fmt.Sprintf("%s:/app/data", mountPath)},
 			AutoRemove: true,
 		}, nil, nil, "")
 		if err != nil {
@@ -172,7 +176,40 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 		}
 
 		statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-		//  && !strings.Contains(err.Error(), "Error response from daemon: No such container:")
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+		case <-statusCh:
+		}
+
+		cmd = []string{
+			filepath.Join("data", svgFileName),
+			filepath.Join("data", resultFileName),
+			strconv.Itoa(resolution),
+		}
+		log.Print(cmd)
+
+		resp, err = cli.ContainerCreate(ctx, &container.Config{
+			Image: "stelzo/svg-to-png",
+			Cmd:   cmd,
+			Volumes: map[string]struct{}{
+				"/app/data": {},
+			},
+		}, &container.HostConfig{
+			Binds:      []string{fmt.Sprintf("%s:/app/data", mountPath)},
+			AutoRemove: true,
+		}, nil, nil, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+			return err
+		}
+
+		statusCh, errCh = cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 		select {
 		case err := <-errCh:
 			if err != nil {
