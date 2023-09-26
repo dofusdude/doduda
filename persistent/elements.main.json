@@ -187,5 +187,6 @@
     "Increases the spell's fixed damage by",
     "Increases the spell's maximum number of casts per turn by",
     "Deactivates casting of the spell on an occupied cell",
-    "Expiry:"
+    "Expiry:",
+    "What's inside?"
 ]
