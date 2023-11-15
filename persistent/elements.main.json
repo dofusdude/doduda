@@ -188,5 +188,6 @@
     "Increases the spell's maximum number of casts per turn by",
     "Deactivates casting of the spell on an occupied cell",
     "Expiry:",
-    "What's inside?"
+    "What's inside?",
+    "(Best Element damage) (Active)"
 ]
