@@ -189,5 +189,6 @@
     "Deactivates casting of the spell on an occupied cell",
     "Expiry:",
     "What's inside?",
-    "(Best Element damage) (Active)"
+    "(Best Element damage) (Active)",
+    "Reduces the spell's minimum range by"
 ]
