@@ -57,7 +57,11 @@ var (
 func main() {
 	viper.SetDefault("LOG_LEVEL", "warn")
 	viper.AutomaticEnv()
-	log.SetLevel(log.ParseLevel(viper.GetString("LOG_LEVEL")))
+	parsedLevel, err := log.ParseLevel(viper.GetString("LOG_LEVEL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetLevel(parsedLevel)
 
 	rootCmd.PersistentFlags().Bool("headless", false, "Run without a TUI.")
 	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. Available: 'main', 'beta'.")
@@ -83,7 +87,7 @@ func main() {
 	renderCmd.Flags().String("incremental", "", "Start from the last version and only render missing images. The format must be <owner>/<repo>/<filename>")
 	rootCmd.AddCommand(renderCmd)
 
-	err := rootCmd.Execute()
+	err = rootCmd.Execute()
 	if err != nil && err.Error() != "" {
 		fmt.Fprintln(os.Stderr, err)
 	}
