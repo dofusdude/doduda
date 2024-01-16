@@ -1,6 +1,6 @@
 module github.com/dofusdude/doduda
 
-go 1.18
+go 1.21
 
 require (
 	github.com/charmbracelet/bubbles v0.17.1
@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/log v0.3.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/dofusdude/ankabuffer v0.0.8
-	github.com/dofusdude/dodumap v0.1.1
+	github.com/dofusdude/dodumap v0.1.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/xhhuango/json v1.19.0
@@ -55,11 +55,9 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/term v0.16.0 // indirect
