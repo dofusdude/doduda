@@ -7,6 +7,7 @@
 </p>
 
 Download the latest Dofus 2 version from Ankama and convert the interesting parts to a developer friendly format.
+
 ```bash
 doduda && doduda map
 ```
@@ -38,6 +39,7 @@ Listen for new Dofus versions and react to their release.
 <img src="https://vhs.charm.sh/vhs-g7BGgJ5f4iUhuzRhoYzzR.gif" alt="watchdog example" width="600">
 
 You can use that for getting anything that supports webhooks to react to Dofus version updates. Some ideas are:
+
 - [Discord Channels](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
 - [ntfy.sh](https://ntfy.sh) (Push notifications to your phone)
 
@@ -49,34 +51,23 @@ This requires [Docker](https://docs.docker.com/engine/install/) to be installed 
 <img src="https://vhs.charm.sh/vhs-H3yfHga5lcnzj9UhLyP5C.gif" alt="render example" width="600">
 
 ## Installation
+
 `doduda` is a single binary that you can download and run without dependencies. There are precompiled versions for Linux, macOS and Windows.
 
-### Eget (recommended)
-[Eget](https://github.com/zyedidia/eget) is a tool for downloading binaries from GitHub releases. 
+### Precompiled binaries (recommended)
 
-Get `Eget` - here you see the quick and dirty way.
-```bash
-curl https://zyedidia.github.io/eget.sh | sh
-```
-
-Download `doduda` and keep it up-to-date with `Eget`.
-```bash
-eget github.com/dofusdude/doduda
-
-eget --upgrade-only github.com/dofusdude/doduda
-```
-
-### Precompiled binaries
 Get the latest `doduda` binary from the [release](https://github.com/dofusdude/doduda/releases) page.
 
-### Go install (needs [Go](https://go.dev/doc/install) >= 1.18)
+### Go install (needs [Go](https://go.dev/doc/install) >= 1.21)
+
 You need to have `$GOPATH/bin` in your `$PATH` for this to work, so `export PATH=$PATH:$(go env GOPATH)/bin` if you haven't already.
 
 ```bash
 go install github.com/dofusdude/doduda@latest
 ```
 
-### Build from source (needs [Go](https://go.dev/doc/install) >= 1.18)
+### Build from source (needs [Go](https://go.dev/doc/install) >= 1.21)
+
 ```bash
 git clone https://github.com/dofusdude/doduda
 cd doduda
