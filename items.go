@@ -34,6 +34,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, dir string, indent string, hea
 		{Filename: "data/common/CreatureBonesOverrides.d2o", FriendlyName: "create_bone_overrides.d2o"},
 		{Filename: "data/common/EvolutiveEffects.d2o", FriendlyName: "evol_effects.d2o"},
 		{Filename: "data/common/BonusesCriterions.d2o", FriendlyName: "bonus_criterions.d2o"},
+		{Filename: "data/common/Titles.d2o", FriendlyName: "titles.d2o"},
 	}
 
 	outPath := filepath.Join(dir, "data")

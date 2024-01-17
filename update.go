@@ -475,10 +475,17 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 	}
 
 	var filesToDownload []ankabuffer.File
-	for i, file := range toDownload {
+	toDownloadFiltered := []HashFile{}
+	for _, file := range toDownload {
 		if manifest.Fragments[fragment].Files[file.Filename].Name == "" {
 			continue
 		}
+		toDownloadFiltered = append(toDownloadFiltered, file)
+	}
+
+	toDownload = toDownloadFiltered
+
+	for i, file := range toDownload {
 		filesToDownload = append(filesToDownload, manifest.Fragments[fragment].Files[file.Filename])
 		toDownload[i].Hash = manifest.Fragments[fragment].Files[file.Filename].Hash
 	}
@@ -543,16 +550,8 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 		bundleUpdates <- true
 	}
 
-	filteredFilesToDownload := make([]ankabuffer.File, 0)
-	for _, file := range filesToDownload {
-		if file.Name == "" {
-			continue
-		}
-		filteredFilesToDownload = append(filteredFilesToDownload, file)
-	}
-
 	var wg sync.WaitGroup
-	for i, file := range filteredFilesToDownload {
+	for i, file := range filesToDownload {
 		wg.Add(1)
 		go func(file ankabuffer.File, bundlesBuffer map[string]DownloadedBundle, dir string, destDir string, i int) {
 			defer wg.Done()
