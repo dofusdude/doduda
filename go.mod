@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/log v0.3.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/dofusdude/ankabuffer v0.0.8
-	github.com/dofusdude/dodumap v0.1.2
+	github.com/dofusdude/dodumap v0.1.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/xhhuango/json v1.19.0
