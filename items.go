@@ -19,7 +19,6 @@ func DownloadItems(hashJson *ankabuffer.Manifest, dir string, indent string, hea
 		{Filename: "data/common/Breeds.d2o", FriendlyName: "breeds.d2o"},
 		{Filename: "data/common/Mounts.d2o", FriendlyName: "mounts.d2o"},
 		{Filename: "data/common/Idols.d2o", FriendlyName: "idols.d2o"},
-		{Filename: "data/common/AlmanaxCalendars.d2o", FriendlyName: "almanax.d2o"},
 		{Filename: "data/common/MonsterRaces.d2o", FriendlyName: "monster_races.d2o"},
 		{Filename: "data/common/Monsters.d2o", FriendlyName: "monsters.d2o"},
 		{Filename: "data/common/CompanionCharacteristics.d2o", FriendlyName: "companion_chars.d2o"},

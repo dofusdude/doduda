@@ -93,6 +93,18 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
 	}
+	if headless {
+		updatesChan <- "Almanax mapping"
+	} else {
+		updatesChan <- "Almanax " + ui.HelpStyle("mapping")
+	}
+	mappedAlmanax := mapping.MapAlmanax(gameData, &languageData)
+	mappedAlmanaxPath := filepath.Join(dir, "data", "MAPPED_ALMANAX.json")
+	marshalSave(mappedAlmanax, mappedAlmanaxPath, indent)
+
+	if isChannelClosed(updatesChan) {
+		os.Exit(1)
+	}
 	updatesChan <- "Sets " + ui.HelpStyle("mapping")
 	mappedSets := mapping.MapSets(gameData, &languageData)
 	mappedSetsPath := filepath.Join(dir, "data", "MAPPED_SETS.json")

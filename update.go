@@ -317,6 +317,12 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 		}
 	}
 
+	if !contains(ignore, "quests") {
+		if err := DownloadQuests(&ankaManifest, dir, indent, headless); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	if !contains(ignore, "itemsimages") {
 		if err := DownloadImagesLauncher(&ankaManifest, dir, headless); err != nil {
 			log.Fatal(err)

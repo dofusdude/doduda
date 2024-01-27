@@ -41,6 +41,8 @@ github.com/dofusdude/dodumap v0.1.4 h1:agT6PXzA5kmFrg1NdEE7d7eFw735BxMFFlx7kDucd
 github.com/dofusdude/dodumap v0.1.4/go.mod h1:xPXYgzYdVEIBG7Gt7f0M8VxcBBwXgiiDMTD6HVt0ay0=
 github.com/dofusdude/dodumap v0.1.5 h1:qS0WGG0PVdJHSjmS3FOt17ULcHhNyTFx1YUTLdkE1ro=
 github.com/dofusdude/dodumap v0.1.5/go.mod h1:xPXYgzYdVEIBG7Gt7f0M8VxcBBwXgiiDMTD6HVt0ay0=
+github.com/dofusdude/dodumap v0.2.0 h1:FVnAzvQ6CuVYZ/o8hl6F7OKpeOZx3duE6Qvk/eh/g3E=
+github.com/dofusdude/dodumap v0.2.0/go.mod h1:xPXYgzYdVEIBG7Gt7f0M8VxcBBwXgiiDMTD6HVt0ay0=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
