@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.25.0
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/charmbracelet/log v0.3.1
-	github.com/docker/docker v25.0.2+incompatible
+	github.com/docker/docker v25.0.3+incompatible
 	github.com/dofusdude/ankabuffer v0.0.8
 	github.com/dofusdude/dodumap v0.2.0
 	github.com/spf13/cobra v1.8.0
