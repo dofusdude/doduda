@@ -70,6 +70,7 @@ func main() {
 	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'itemsimages', 'mountsimages', 'quests'.")
 	rootCmd.PersistentFlags().BoolP("indent", "I", false, "Indent the JSON output (increases file size)")
+	rootCmd.PersistentFlags().StringP("version", "v", "latest", "Specify Dofus version to download. Example: 2.60.0")
 
 	parseCmd.Flags().String("persistence-dir", "", "Use this directory for persistent data that can be changed while parsing after version updates.")
 	rootCmd.AddCommand(parseCmd)
@@ -326,6 +327,11 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	version, err := ccmd.Flags().GetString("version")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	isBeta := gameRelease == "beta"
 	var indentation string
 	if indent {
@@ -333,7 +339,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 	} else {
 		indentation = ""
 	}
-	err = Download(isBeta, dir, manifest, workers, ignore, indentation, headless)
+	err = Download(isBeta, version, dir, manifest, workers, ignore, indentation, headless)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

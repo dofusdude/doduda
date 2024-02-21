@@ -228,7 +228,7 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
-func Download(beta bool, dir string, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
+func Download(beta bool, version string, dir string, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
 	CreateDataDirectoryStructure(dir)
 
 	var ankaManifest ankabuffer.Manifest
@@ -269,7 +269,16 @@ func Download(beta bool, dir string, manifest string, mountsWorker int, ignore [
 	}
 
 	if manifestPath == "" {
-		version := GetLatestLauncherVersion(beta)
+		cytrusPrefix := "6.0_"
+		if version == "latest" {
+			version = GetLatestLauncherVersion(beta)
+		} else {
+			// ATT: prefix changes with cytrus updates
+			if !strings.HasPrefix(version, cytrusPrefix) {
+				version = fmt.Sprintf("%s%s", cytrusPrefix, version)
+			}
+		}
+		feedbacks <- fmt.Sprintf("v%s", strings.TrimPrefix(version, cytrusPrefix))
 
 		var err error
 
