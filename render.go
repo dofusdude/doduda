@@ -171,7 +171,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 			log.Fatal(err)
 		}
 
-		if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 			return err
 		}
 
@@ -204,7 +204,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 			log.Fatal(err)
 		}
 
-		if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 			return err
 		}
 
@@ -219,7 +219,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 
 		err = os.Rename(tmpOutputPath, absOutputPath)
 		if err != nil {
-			return err
+			log.Warn("File " + swfFile.Name() + " could not be converted")
 		}
 		progressChan <- true
 	}
