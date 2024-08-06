@@ -10,7 +10,7 @@ require (
 	github.com/docker/docker v26.0.2+incompatible
 	github.com/dofusdude/ankabuffer v0.0.8
 	github.com/dofusdude/dodumap v0.2.3
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/xhhuango/json v1.19.0
 )
