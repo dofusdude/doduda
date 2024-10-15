@@ -204,13 +204,13 @@ func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manif
 	gameHashesUrl := fmt.Sprintf("https://cytrus.cdn.ankama.com/dofus/releases/%s/windows/%s.manifest", gameVersionType, version)
 	hashResponse, err := http.Get(gameHashesUrl)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not get manifest file", err)
 		return ankabuffer.Manifest{}, err
 	}
 
 	hashBody, err := io.ReadAll(hashResponse.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not read response body of manifest file", err)
 		return ankabuffer.Manifest{}, err
 	}
 
