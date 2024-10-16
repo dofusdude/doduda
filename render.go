@@ -15,8 +15,8 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/dofusdude/doduda/ui"
 )
@@ -45,13 +45,13 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 	updateChan <- "Pulling image"
 
 	ctx := context.Background()
-	swfToSvg, err := cli.ImagePull(ctx, "stelzo/swf-to-svg", types.ImagePullOptions{})
+	swfToSvg, err := cli.ImagePull(ctx, "stelzo/swf-to-svg", image.PullOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
 	swfToSvg.Close()
 
-	svgToPng, err := cli.ImagePull(ctx, "stelzo/svg-to-png", types.ImagePullOptions{})
+	svgToPng, err := cli.ImagePull(ctx, "stelzo/svg-to-png", image.PullOptions{})
 	if err != nil {
 		log.Fatal(err)
 	}
