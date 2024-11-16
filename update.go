@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -194,7 +195,7 @@ func CreateDataDirectoryStructure(dir string) {
 	}
 }
 
-func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manifest, error) {
+func GetReleaseManifest(version string, beta bool, gameVersion string, dir string) (ankabuffer.Manifest, error) {
 	var gameVersionType string
 	if beta {
 		gameVersionType = "beta"
@@ -214,7 +215,7 @@ func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manif
 		return ankabuffer.Manifest{}, err
 	}
 
-	fileHashes := *ankabuffer.ParseManifest(hashBody)
+	fileHashes := *ankabuffer.ParseManifest(hashBody, gameVersion)
 
 	return fileHashes, nil
 }
@@ -268,6 +269,8 @@ func Download(beta bool, version string, dir string, manifest string, mountsWork
 		}
 	}
 
+	var dofusVersion string
+
 	if manifestPath == "" {
 		cytrusPrefix := "6.0_"
 		if version == "latest" {
@@ -278,11 +281,10 @@ func Download(beta bool, version string, dir string, manifest string, mountsWork
 				version = fmt.Sprintf("%s%s", cytrusPrefix, version)
 			}
 		}
-		feedbacks <- fmt.Sprintf("v%s", strings.TrimPrefix(version, cytrusPrefix))
 
-		var err error
+		dofusVersion = strings.TrimPrefix(version, cytrusPrefix)
 
-		ankaManifest, err = GetReleaseManifest(version, beta, dir)
+		ankaManifest, err := GetReleaseManifest(version, beta, dofusVersion, dir)
 		if err != nil {
 			return err
 		}
@@ -309,36 +311,46 @@ func Download(beta bool, version string, dir string, manifest string, mountsWork
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		dofusVersion = ankaManifest.GameVersion
 	}
+
+	rawDofusMajorVersion, err := strconv.Atoi(strings.Split(dofusVersion, ".")[0])
+	if err != nil {
+		log.Fatal("Invalid version")
+	}
+
+	feedbacks <- fmt.Sprintf("v%s", dofusVersion)
 
 	close(feedbacks)
 	manifestWg.Wait()
 
 	if !contains(ignore, "languages") {
-		if err := DownloadLanguages(&ankaManifest, dir, indent, headless); err != nil {
+		if err := DownloadLanguages(&ankaManifest, rawDofusMajorVersion, dir, indent, headless); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	if !contains(ignore, "items") {
-		if err := DownloadItems(&ankaManifest, dir, indent, headless); err != nil {
+		if err := DownloadItems(&ankaManifest, rawDofusMajorVersion, dir, indent, headless); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	if !contains(ignore, "quests") {
-		if err := DownloadQuests(&ankaManifest, dir, indent, headless); err != nil {
+		if err := DownloadQuests(&ankaManifest, rawDofusMajorVersion, dir, indent, headless); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	if !contains(ignore, "itemsimages") {
-		if err := DownloadImagesLauncher(&ankaManifest, dir, headless); err != nil {
+		if err := DownloadImagesLauncher(&ankaManifest, rawDofusMajorVersion, dir, headless); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	if !contains(ignore, "mountsimages") && !contains(ignore, "items") {
+	// mountsimages rendering only needed for Dofus 2.x
+	if rawDofusMajorVersion == 2 && !contains(ignore, "mountsimages") && !contains(ignore, "items") {
 		gamedata := mapping.ParseRawData(dir)
 		if !headless {
 			mountsWorker = 1
