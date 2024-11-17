@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +15,9 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/client"
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/ui"
 	"github.com/dofusdude/doduda/unpack"
@@ -383,7 +387,90 @@ func DownloadBundle(bundleHash string) ([]byte, error) {
 	return body, nil
 }
 
-func Unpack(file string, dir string, destDir string, indent string) {
+func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {
+	feedbacks := make(chan string)
+
+	var feedbackWg sync.WaitGroup
+	if !muteSpinner {
+		feedbackWg.Add(1)
+		go func() {
+			defer feedbackWg.Done()
+			ui.Spinner("Images", feedbacks, true, headless)
+		}()
+	}
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cli.Close()
+
+	feedbacks <- "Pulling image"
+
+	imageName := "stelzo/assetstudio-cli"
+
+	ctx := context.Background()
+	assetstudio, err := cli.ImagePull(ctx, imageName, image.PullOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	assetstudio.Close()
+
+	bundles, err := os.ReadDir(inputDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, bundle := range bundles {
+		if bundle.IsDir() || !strings.HasSuffix(bundle.Name(), ".imagebundle") {
+			continue
+		}
+
+		absInputPath := filepath.Join(inputDir, bundle.Name())
+
+		cmd := []string{"./data", "--unity-version", "2022.3.29f1"}
+
+		resp, err := cli.ContainerCreate(ctx, &container.Config{
+			Image: imageName,
+			Cmd:   cmd,
+			Volumes: map[string]struct{}{
+				"/app/AssetStudio/data":     {},
+				"/app/AssetStudio/ASExport": {},
+			},
+		}, &container.HostConfig{
+			Binds: []string{
+				fmt.Sprintf("%s:/app/AssetStudio/data", absInputPath),
+				fmt.Sprintf("%s:/app/AssetStudio/ASExport", outputDir)},
+			AutoRemove: true,
+		}, nil, nil, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		feedbacks <- "Image extraction"
+
+		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+			return err
+		}
+
+		statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+		case <-statusCh:
+		}
+
+	}
+
+	close(feedbacks)
+	feedbackWg.Wait()
+
+	return nil
+}
+
+func Unpack(file string, dir string, destDir string, indent string, muteSpinner bool, headless bool) {
 	suffix := filepath.Ext(file)[1:]
 
 	if suffix == "png" || suffix == "jpg" || suffix == "jpeg" {
@@ -397,7 +484,7 @@ func Unpack(file string, dir string, destDir string, indent string) {
 	fileNoExt := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
 
-	supportedUnpack := []string{"d2o", "d2i"}
+	supportedUnpack := []string{"d2o", "d2i", "imagebundle"}
 	isSupported := false
 	for _, unpackType := range supportedUnpack {
 		if suffix == unpackType {
@@ -471,6 +558,14 @@ func Unpack(file string, dir string, destDir string, indent string) {
 		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
 
 		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if suffix == "imagebundle" {
+		dir := filepath.Dir(file)
+		err := UnpackUnityImages(dir, destDir, muteSpinner, headless)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -662,7 +757,7 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 			log.Infof("%s ✅", filepath.Base(file.Name))
 
 			if unpack {
-				Unpack(offlineFilePath, dir, destDir, indent)
+				Unpack(offlineFilePath, dir, destDir, indent, muteSpinner, silent)
 				err := os.Remove(offlineFilePath)
 				if err != nil {
 					log.Fatal(err)

@@ -108,11 +108,11 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, version int, dir stri
 		return nil
 	} else if version == 3 {
 		fileNames := []HashFile{
-			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_.bundle", FriendlyName: "item_images.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_.bundle", FriendlyName: "item_images.imagebundle"},
 			//{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_.bundle", FriendlyName: "mount_images.bundle"},
 		}
 
-		err := DownloadUnpackFiles("Images", hashJson, "picto", fileNames, dir, outPath, false, "", headless, false)
+		err := DownloadUnpackFiles("Images", hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))
