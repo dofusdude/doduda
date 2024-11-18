@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/charmbracelet/log v0.4.0
 	github.com/docker/docker v27.3.1+incompatible
-	github.com/dofusdude/ankabuffer v0.0.8
+	github.com/dofusdude/ankabuffer v0.0.9
 	github.com/dofusdude/dodumap v0.3.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
