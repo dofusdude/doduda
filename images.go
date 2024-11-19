@@ -112,7 +112,12 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, version int, dir stri
 			//{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_.bundle", FriendlyName: "mount_images.bundle"},
 		}
 
-		err := DownloadUnpackFiles("Images", hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
+		err := PullImages([]string{"stelzo/assetstudio-cli:latest"}, false, headless)
+		if err != nil {
+			return err
+		}
+
+		err = DownloadUnpackFiles("Images", hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))

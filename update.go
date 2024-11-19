@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -387,7 +388,70 @@ func DownloadBundle(bundleHash string) ([]byte, error) {
 	return body, nil
 }
 
-func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {
+// TODO category not used anymore
+func UnpackUnityBundle(category string, inputPath string, outputPath string, muteSpinner bool, headless bool) error {
+	if !strings.HasSuffix(inputPath, ".bundle") {
+		return fmt.Errorf("invalid bundle suffix")
+	}
+
+	if !strings.HasSuffix(outputPath, ".json") {
+		return fmt.Errorf("can only output to json")
+	}
+
+	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
+		return fmt.Errorf("bundle %s does not exist", inputPath)
+	}
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	outputTrimmed := strings.TrimSuffix(outputPath, ".asset.json")
+	outputFileName := outputTrimmed + ".json"
+
+	inputRawFileName := filepath.Base(inputPath)
+	outputRawFileName := filepath.Base(outputFileName)
+
+	inputDir := filepath.Dir(inputPath)
+
+	cmd := []string{"dotnet", "out/unity-bundle-unwrap.dll", path.Join("/app", "data", inputRawFileName), path.Join("/app", "data", outputRawFileName)}
+
+	ctx := context.Background()
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image: "stelzo/doduda-umbu:latest",
+		Cmd:   cmd,
+		Volumes: map[string]struct{}{
+			"/app/data": {},
+		},
+	}, &container.HostConfig{
+		Binds: []string{
+			fmt.Sprintf("%s:/app/data", inputDir),
+		},
+		AutoRemove: true,
+	}, nil, nil, "")
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return err
+	}
+
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	case <-statusCh:
+	}
+
+	return nil
+}
+
+func PullImages(images []string, muteSpinner bool, headless bool) error {
 	feedbacks := make(chan string)
 
 	var feedbackWg sync.WaitGroup
@@ -395,27 +459,42 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 		feedbackWg.Add(1)
 		go func() {
 			defer feedbackWg.Done()
-			ui.Spinner("Images", feedbacks, true, headless)
+			ui.Spinner("Docker", feedbacks, true, headless)
 		}()
 	}
 
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	for _, imageRef := range images {
+		ctx := context.Background()
+		feedbacks <- "Pulling " + imageRef
+		imageHandle, err := cli.ImagePull(ctx, imageRef, image.PullOptions{})
+		if err != nil {
+			return err
+		}
+		imageHandle.Close()
+	}
+
+	close(feedbacks)
+	feedbackWg.Wait()
+
+	return nil
+}
+
+func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer cli.Close()
 
-	feedbacks <- "Pulling image"
-
-	imageName := "stelzo/assetstudio-cli"
+	imageName := "stelzo/assetstudio-cli:latest"
 
 	ctx := context.Background()
-	assetstudio, err := cli.ImagePull(ctx, imageName, image.PullOptions{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	assetstudio.Close()
-
 	bundles, err := os.ReadDir(inputDir)
 	if err != nil {
 		log.Fatal(err)
@@ -447,8 +526,6 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 			log.Fatal(err)
 		}
 
-		feedbacks <- "Image extraction"
-
 		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 			return err
 		}
@@ -464,13 +541,10 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 
 	}
 
-	close(feedbacks)
-	feedbackWg.Wait()
-
 	return nil
 }
 
-func Unpack(file string, dir string, destDir string, indent string, muteSpinner bool, headless bool) {
+func Unpack(file string, dir string, destDir string, category string, indent string, muteSpinner bool, headless bool) {
 	suffix := filepath.Ext(file)[1:]
 
 	if suffix == "png" || suffix == "jpg" || suffix == "jpeg" {
@@ -484,7 +558,7 @@ func Unpack(file string, dir string, destDir string, indent string, muteSpinner 
 	fileNoExt := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
 
-	supportedUnpack := []string{"d2o", "d2i", "imagebundle"}
+	supportedUnpack := []string{"d2o", "d2i", "imagebundle", "bundle"}
 	isSupported := false
 	for _, unpackType := range supportedUnpack {
 		if suffix == unpackType {
@@ -566,6 +640,14 @@ func Unpack(file string, dir string, destDir string, indent string, muteSpinner 
 	if suffix == "imagebundle" {
 		dir := filepath.Dir(file)
 		err := UnpackUnityImages(dir, destDir, muteSpinner, headless)
+		// TODO clean the doubled images, only take where the image is cropped
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if suffix == "bundle" {
+		err := UnpackUnityBundle(category, file, absOutPath, muteSpinner, headless)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -625,7 +707,7 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 	}
 
 	if len(bundles) == 0 {
-		log.Warn("No bundles to download")
+		//log.Warn("No bundles to download") // TODO it seems like the files come out okay even if there are no bundles, maybe warning is not needed
 		if !muteSpinner {
 			close(feedbacks)
 			feedbackWg.Wait()
@@ -757,7 +839,7 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 			log.Infof("%s ✅", filepath.Base(file.Name))
 
 			if unpack {
-				Unpack(offlineFilePath, dir, destDir, indent, muteSpinner, silent)
+				Unpack(offlineFilePath, dir, destDir, title, indent, muteSpinner, silent)
 				err := os.Remove(offlineFilePath)
 				if err != nil {
 					log.Fatal(err)
