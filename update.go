@@ -2,17 +2,25 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/client"
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/ui"
 	"github.com/dofusdude/doduda/unpack"
@@ -53,7 +61,7 @@ func Values[M ~map[K]V, K comparable, V any](m M) []V {
 	return r
 }
 
-func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Manifest, worker int, dir string, headless bool) {
+func DownloadMountsImages(mounts *mapping.JSONGameData, bin int, hashJson *ankabuffer.Manifest, worker int, dir string, headless bool) {
 	arr := Values(mounts.Mounts)
 	workerSlices := PartitionSlice(arr, worker)
 
@@ -65,7 +73,7 @@ func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Man
 			if headless {
 				log.Print(ui.TitleStyle.Render("Mount Worker"), "id", id, "jobs", len(workerSlice), "state", "spawned")
 			}
-			DownloadMountImageWorker(hashJson, "main", dir, workerSlice, headless)
+			DownloadMountImageWorker(hashJson, bin, "main", dir, workerSlice, headless)
 			if headless {
 				log.Print(ui.TitleStyle.Render("Mount Worker"), "id", id, "jobs", len(workerSlice), "state", "finished")
 			}
@@ -74,7 +82,7 @@ func DownloadMountsImages(mounts *mapping.JSONGameData, hashJson *ankabuffer.Man
 	wg.Wait()
 }
 
-func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, dir string, workerSlice []mapping.JSONGameMount, headless bool) {
+func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment string, dir string, workerSlice []mapping.JSONGameMount, headless bool) {
 	workerUpdates := make(chan bool, len(workerSlice))
 	var feedbackWg sync.WaitGroup
 	feedbackWg.Add(1)
@@ -99,7 +107,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, di
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
 			outPath := filepath.Join(dir, "data", "img", "mount")
-			_ = DownloadUnpackFiles("Mount Bitmaps", manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
+			_ = DownloadUnpackFiles("Mount Bitmaps", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
 		}(mount.Id, &wg, dir)
 
 		wg.Add(1)
@@ -115,7 +123,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, fragment string, di
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
 			outPath := filepath.Join(dir, "data", "vector", "mount")
-			_ = DownloadUnpackFiles("Mount Vectors", manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
+			_ = DownloadUnpackFiles("Mount Vectors", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
 		}(mount.Id, &wg, dir)
 
 		wg.Wait()
@@ -194,27 +202,27 @@ func CreateDataDirectoryStructure(dir string) {
 	}
 }
 
-func GetReleaseManifest(version string, beta bool, dir string) (ankabuffer.Manifest, error) {
+func GetReleaseManifest(version string, beta bool, platform string, gameVersion string, dir string) (ankabuffer.Manifest, error) {
 	var gameVersionType string
 	if beta {
 		gameVersionType = "beta"
 	} else {
 		gameVersionType = "main"
 	}
-	gameHashesUrl := fmt.Sprintf("https://cytrus.cdn.ankama.com/dofus/releases/%s/windows/%s.manifest", gameVersionType, version)
+	gameHashesUrl := fmt.Sprintf("https://cytrus.cdn.ankama.com/dofus/releases/%s/%s/%s.manifest", gameVersionType, platform, version)
 	hashResponse, err := http.Get(gameHashesUrl)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not get manifest file", err)
 		return ankabuffer.Manifest{}, err
 	}
 
 	hashBody, err := io.ReadAll(hashResponse.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not read response body of manifest file", err)
 		return ankabuffer.Manifest{}, err
 	}
 
-	fileHashes := *ankabuffer.ParseManifest(hashBody)
+	fileHashes := *ankabuffer.ParseManifest(hashBody, gameVersion)
 
 	return fileHashes, nil
 }
@@ -228,9 +236,39 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
-func Download(beta bool, version string, dir string, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
-	CreateDataDirectoryStructure(dir)
+// ported from https://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable-string
+func humanFileSize(bytes float64, decimal bool, precision int) string {
+	thresh := 1024.0
+	if decimal {
+		thresh = 1000.0
+	}
 
+	if math.Abs(bytes) < thresh {
+		return fmt.Sprintf("%d B", int(bytes))
+	}
+
+	var units []string
+	if decimal {
+		units = []string{"kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
+	} else {
+		units = []string{"KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"}
+	}
+
+	u := -1
+	r := math.Pow(10, float64(precision))
+
+	for {
+		bytes /= thresh
+		u++
+		if math.Round(math.Abs(bytes)*r)/r < thresh || u == len(units)-1 {
+			break
+		}
+	}
+
+	return fmt.Sprintf("%.*f %s", precision, bytes, units[u])
+}
+
+func Download(beta bool, version string, dir string, fullGame bool, platform string, bin int, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
 	var ankaManifest ankabuffer.Manifest
 	manifestSearchPath := "manifest.json"
 
@@ -268,6 +306,8 @@ func Download(beta bool, version string, dir string, manifest string, mountsWork
 		}
 	}
 
+	var dofusVersion string
+
 	if manifestPath == "" {
 		cytrusPrefix := "6.0_"
 		if version == "latest" {
@@ -278,11 +318,10 @@ func Download(beta bool, version string, dir string, manifest string, mountsWork
 				version = fmt.Sprintf("%s%s", cytrusPrefix, version)
 			}
 		}
-		feedbacks <- fmt.Sprintf("v%s", strings.TrimPrefix(version, cytrusPrefix))
 
-		var err error
+		dofusVersion = strings.TrimPrefix(version, cytrusPrefix)
 
-		ankaManifest, err = GetReleaseManifest(version, beta, dir)
+		ankaManifest, err := GetReleaseManifest(version, beta, platform, dofusVersion, dir)
 		if err != nil {
 			return err
 		}
@@ -309,44 +348,104 @@ func Download(beta bool, version string, dir string, manifest string, mountsWork
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		dofusVersion = ankaManifest.GameVersion
 	}
+
+	rawDofusMajorVersion, err := strconv.Atoi(strings.Split(dofusVersion, ".")[0])
+	if err != nil {
+		log.Fatal("Invalid version")
+	}
+
+	feedbacks <- fmt.Sprintf("v%s", dofusVersion)
 
 	close(feedbacks)
 	manifestWg.Wait()
 
-	if !contains(ignore, "languages") {
-		if err := DownloadLanguages(&ankaManifest, dir, indent, headless); err != nil {
-			log.Fatal(err)
-		}
-	}
+	if fullGame {
+		var fullGameUiWg sync.WaitGroup
+		feedbacks := make(chan string)
+		fullGameUiWg.Add(1)
+		go func() {
+			defer fullGameUiWg.Done()
+			ui.Spinner(ankaManifest.GameVersion, feedbacks, false, headless)
+		}()
 
-	if !contains(ignore, "items") {
-		if err := DownloadItems(&ankaManifest, dir, indent, headless); err != nil {
-			log.Fatal(err)
+		if isChannelClosed(feedbacks) {
+			os.Exit(1)
 		}
-	}
 
-	if !contains(ignore, "quests") {
-		if err := DownloadQuests(&ankaManifest, dir, indent, headless); err != nil {
-			log.Fatal(err)
+		var totalSize int64
+		fragmentFiles := map[string][]HashFile{}
+		for _, fragment := range ankaManifest.Fragments {
+			for _, fragmentFile := range fragment.Files {
+				if fragmentFile.Name == "" {
+					continue
+				}
+
+				totalSize += fragmentFile.Size
+				hashFile := HashFile{
+					Filename:     fragmentFile.Name,
+					FriendlyName: fragmentFile.Name,
+					Hash:         fragmentFile.Hash,
+				}
+
+				fragmentFiles[fragment.Name] = append(fragmentFiles[fragment.Name], hashFile)
+			}
 		}
-	}
 
-	if !contains(ignore, "itemsimages") {
-		if err := DownloadImagesLauncher(&ankaManifest, dir, headless); err != nil {
-			log.Fatal(err)
+		totalFragments := len(fragmentFiles)
+		fragmentCounter := 0
+		for fragmentName, files := range fragmentFiles {
+			fragmentCounter++
+			feedbacks <- "Fragment " + strconv.Itoa(fragmentCounter) + "/" + strconv.Itoa(totalFragments)
+			err = DownloadUnpackFiles(ankaManifest.GameVersion, bin, &ankaManifest, fragmentName, files, dir, path.Join("data", ankaManifest.GameVersion), false, "", headless, false)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	if !contains(ignore, "mountsimages") && !contains(ignore, "items") {
-		gamedata := mapping.ParseRawData(dir)
-		if !headless {
-			mountsWorker = 1
+		close(feedbacks)
+		fullGameUiWg.Wait()
+
+	} else {
+		CreateDataDirectoryStructure(dir)
+
+		if !contains(ignore, "languages") {
+			if err := DownloadLanguages(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+				log.Fatal(err)
+			}
 		}
-		DownloadMountsImages(gamedata, &ankaManifest, mountsWorker, dir, headless)
-	}
 
-	os.RemoveAll(fmt.Sprintf("%s/data/tmp", dir))
+		if !contains(ignore, "items") {
+			if err := DownloadItems(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if !contains(ignore, "quests") {
+			if err := DownloadQuests(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if !contains(ignore, "itemsimages") {
+			if err := DownloadImagesLauncher(&ankaManifest, bin, rawDofusMajorVersion, dir, headless); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		// mountsimages rendering only needed for Dofus 2.x
+		if rawDofusMajorVersion == 2 && !contains(ignore, "mountsimages") && !contains(ignore, "items") {
+			gamedata := mapping.ParseRawData(dir)
+			if !headless {
+				mountsWorker = 1
+			}
+			DownloadMountsImages(gamedata, bin, &ankaManifest, mountsWorker, dir, headless)
+		}
+
+		os.RemoveAll(fmt.Sprintf("%s/data/tmp", dir))
+	}
 
 	return nil
 }
@@ -371,7 +470,163 @@ func DownloadBundle(bundleHash string) ([]byte, error) {
 	return body, nil
 }
 
-func Unpack(file string, dir string, destDir string, indent string) {
+// TODO category not used anymore
+func UnpackUnityBundle(category string, inputPath string, outputPath string, muteSpinner bool, headless bool) error {
+	if !strings.HasSuffix(inputPath, ".bundle") {
+		return fmt.Errorf("invalid bundle suffix")
+	}
+
+	if !strings.HasSuffix(outputPath, ".json") {
+		return fmt.Errorf("can only output to json")
+	}
+
+	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
+		return fmt.Errorf("bundle %s does not exist", inputPath)
+	}
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	outputTrimmed := strings.TrimSuffix(outputPath, ".asset.json")
+	outputFileName := outputTrimmed + ".json"
+
+	inputRawFileName := filepath.Base(inputPath)
+	outputRawFileName := filepath.Base(outputFileName)
+
+	inputDir := filepath.Dir(inputPath)
+
+	cmd := []string{"dotnet", "out/unity-bundle-unwrap.dll", path.Join("/app", "data", inputRawFileName), path.Join("/app", "data", outputRawFileName)}
+
+	ctx := context.Background()
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image: "stelzo/doduda-umbu:latest",
+		Cmd:   cmd,
+		Volumes: map[string]struct{}{
+			"/app/data": {},
+		},
+	}, &container.HostConfig{
+		Binds: []string{
+			fmt.Sprintf("%s:/app/data", inputDir),
+		},
+		AutoRemove: true,
+	}, nil, nil, "")
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return err
+	}
+
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	case <-statusCh:
+	}
+
+	return nil
+}
+
+func PullImages(images []string, muteSpinner bool, headless bool) error {
+	feedbacks := make(chan string)
+
+	var feedbackWg sync.WaitGroup
+	if !muteSpinner {
+		feedbackWg.Add(1)
+		go func() {
+			defer feedbackWg.Done()
+			ui.Spinner("Docker", feedbacks, true, headless)
+		}()
+	}
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	for _, imageRef := range images {
+		ctx := context.Background()
+		feedbacks <- "Pulling " + imageRef
+		imageHandle, err := cli.ImagePull(ctx, imageRef, image.PullOptions{})
+		if err != nil {
+			return err
+		}
+		imageHandle.Close()
+	}
+
+	close(feedbacks)
+	feedbackWg.Wait()
+
+	return nil
+}
+
+func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cli.Close()
+
+	imageName := "stelzo/assetstudio-cli:latest"
+
+	ctx := context.Background()
+	bundles, err := os.ReadDir(inputDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, bundle := range bundles {
+		if bundle.IsDir() || !strings.HasSuffix(bundle.Name(), ".imagebundle") {
+			continue
+		}
+
+		absInputPath := filepath.Join(inputDir, bundle.Name())
+
+		cmd := []string{"./data", "--unity-version", "2022.3.29f1"}
+
+		resp, err := cli.ContainerCreate(ctx, &container.Config{
+			Image: imageName,
+			Cmd:   cmd,
+			Volumes: map[string]struct{}{
+				"/app/AssetStudio/data":     {},
+				"/app/AssetStudio/ASExport": {},
+			},
+		}, &container.HostConfig{
+			Binds: []string{
+				fmt.Sprintf("%s:/app/AssetStudio/data", absInputPath),
+				fmt.Sprintf("%s:/app/AssetStudio/ASExport", outputDir)},
+			AutoRemove: true,
+		}, nil, nil, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+			return err
+		}
+
+		statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+		case <-statusCh:
+		}
+
+	}
+
+	return nil
+}
+
+func Unpack(file string, dir string, destDir string, category string, indent string, muteSpinner bool, headless bool) {
 	suffix := filepath.Ext(file)[1:]
 
 	if suffix == "png" || suffix == "jpg" || suffix == "jpeg" {
@@ -385,7 +640,7 @@ func Unpack(file string, dir string, destDir string, indent string) {
 	fileNoExt := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
 
-	supportedUnpack := []string{"d2o", "d2i"}
+	supportedUnpack := []string{"d2o", "d2i", "imagebundle", "bundle", "bin"}
 	isSupported := false
 	for _, unpackType := range supportedUnpack {
 		if suffix == unpackType {
@@ -463,6 +718,54 @@ func Unpack(file string, dir string, destDir string, indent string) {
 			log.Fatal(err)
 		}
 	}
+
+	if suffix == "imagebundle" {
+		dir := filepath.Dir(file)
+		err := UnpackUnityImages(dir, destDir, muteSpinner, headless)
+		// TODO clean the doubled images, only take where the image is cropped
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if suffix == "bundle" {
+		err := UnpackUnityBundle(category, file, absOutPath, muteSpinner, headless)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if suffix == "bin" {
+		rawData, err := os.ReadFile(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		langWithExt := filepath.Base(file)
+		langWithoutExt := strings.TrimSuffix(langWithExt, filepath.Ext(langWithExt))
+
+		entities, err := unpack.LanguageExtractStrings(rawData)
+		data := map[string]interface{}{
+			"language": langWithoutExt,
+			"texts":    entities,
+		}
+
+		var marshalledBytes []byte
+		if indent != "" {
+			marshalledBytes, err = jsnan.MarshalIndent(data, "", indent)
+		} else {
+			marshalledBytes, err = jsnan.Marshal(data)
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
+
+		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func isChannelClosed[T any](ch chan T) bool {
@@ -477,18 +780,45 @@ func isChannelClosed[T any](ch chan T) bool {
 	return false
 }
 
-func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string, silent bool, muteSpinner bool) error {
-	feedbacks := make(chan string)
+func convertMBToBytes(mb int) int64 {
+	return int64(mb) * 1024 * 1024
+}
 
-	var feedbackWg sync.WaitGroup
-	if !muteSpinner {
-		feedbackWg.Add(1)
-		go func() {
-			defer feedbackWg.Done()
-			ui.Spinner(title, feedbacks, true, silent)
-		}()
+func splitFilesIntoBins(files []ankabuffer.File, maxMBPerBin int) [][]ankabuffer.File {
+	maxBytesPerBin := convertMBToBytes(maxMBPerBin)
+	var bins [][]ankabuffer.File
+	var currentBin []ankabuffer.File
+	var currentBinSize int64
+
+	for _, file := range files {
+		if file.Size > maxBytesPerBin {
+			if len(currentBin) > 0 {
+				bins = append(bins, currentBin)
+				currentBin = nil
+				currentBinSize = 0
+			}
+			bins = append(bins, []ankabuffer.File{file})
+			continue
+		}
+
+		if currentBinSize+file.Size > maxBytesPerBin {
+			bins = append(bins, currentBin)
+			currentBin = []ankabuffer.File{file}
+			currentBinSize = file.Size
+		} else {
+			currentBin = append(currentBin, file)
+			currentBinSize += file.Size
+		}
 	}
 
+	if len(currentBin) > 0 {
+		bins = append(bins, currentBin)
+	}
+
+	return bins
+}
+
+func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string, silent bool, muteSpinner bool) error {
 	var filesToDownload []ankabuffer.File
 	toDownloadFiltered := []HashFile{}
 	for _, file := range toDownload {
@@ -505,167 +835,209 @@ func DownloadUnpackFiles(title string, manifest *ankabuffer.Manifest, fragment s
 		toDownload[i].Hash = manifest.Fragments[fragment].Files[file.Filename].Hash
 	}
 
-	if !muteSpinner {
-		feedbacks <- "finding bundles"
+	var filebins [][]ankabuffer.File
+	if bin > 0 {
+		filebins = splitFilesIntoBins(filesToDownload, bin)
+	} else {
+		filebins = [][]ankabuffer.File{filesToDownload}
 	}
 
-	bundles := ankabuffer.GetNeededBundles(filesToDownload)
+	for idx, filesToDownload := range filebins {
+		innerTitle := fmt.Sprintf("%s (%d/%d)", title, idx+1, len(filebins))
 
-	if len(bundles) == 0 && len(filesToDownload) > 0 {
-		for _, file := range filesToDownload {
-			log.Warn("Missing bundle for", file.Name)
-		}
-	}
+		feedbacks := make(chan string)
 
-	if len(bundles) == 0 {
-		log.Warn("No bundles to download")
+		var feedbackWg sync.WaitGroup
 		if !muteSpinner {
+			feedbackWg.Add(1)
+			go func() {
+				defer feedbackWg.Done()
+				ui.Spinner(innerTitle, feedbacks, true, silent)
+			}()
+		}
+
+		if !muteSpinner {
+			feedbacks <- fmt.Sprintf("preparing %d files", len(filesToDownload))
+		}
+
+		bundles := ankabuffer.GetNeededBundles(filesToDownload)
+
+		if len(bundles) == 0 && len(filesToDownload) > 0 {
+			for _, file := range filesToDownload {
+				log.Warn("Missing bundle for", file.Name)
+			}
+		}
+
+		if len(bundles) == 0 {
+			//log.Warn("No bundles to download") // TODO it seems like the files come out okay even if there are no bundles, maybe warning is not needed
+			if !muteSpinner {
+				close(feedbacks)
+				feedbackWg.Wait()
+			}
+			continue
+		}
+
+		bundlesMap := ankabuffer.GetBundleHashMap(manifest)
+
+		type DownloadedBundle struct {
+			BundleHash string
+			Data       []byte
+		}
+
+		bundlesBuffer := make(map[string]DownloadedBundle)
+
+		if !muteSpinner {
+			feedbacks <- "downloading"
 			close(feedbacks)
-			feedbackWg.Wait()
 		}
-		return nil
-	}
+		feedbackWg.Wait()
 
-	if !muteSpinner {
-		feedbacks <- "mapping bundles"
-	}
+		bundleUpdates := make(chan bool, len(bundles))
+		feedbackWg.Add(1)
+		go func() {
+			defer feedbackWg.Done()
+			ui.Progress(innerTitle, len(bundles)+1, bundleUpdates, 0, true, silent)
+		}()
 
-	bundlesMap := ankabuffer.GetBundleHashMap(manifest)
+		var bundleDownloadWg sync.WaitGroup
+		var bundleDownloadMu sync.Mutex
+		maxGoroutines := runtime.NumCPU() * 10
+		sem := make(chan struct{}, maxGoroutines)
 
-	type DownloadedBundle struct {
-		BundleHash string
-		Data       []byte
-	}
+		for _, bundle := range bundles {
+			bundleDownloadWg.Add(1)
+			go func(bundle string) {
+				defer bundleDownloadWg.Done()
 
-	bundlesBuffer := make(map[string]DownloadedBundle)
+				sem <- struct{}{}
+				defer func() { <-sem }()
 
-	if !muteSpinner {
-		feedbacks <- "loading bundles"
-		close(feedbacks)
-	}
-	feedbackWg.Wait()
-
-	bundleUpdates := make(chan bool, len(bundles))
-	feedbackWg.Add(1)
-	go func() {
-		defer feedbackWg.Done()
-		ui.Progress(title, len(bundles)+1, bundleUpdates, 0, false, silent)
-	}()
-
-	for _, bundle := range bundles {
-		bundleData, err := DownloadBundle(bundle)
-		if err != nil {
-			return fmt.Errorf("could not download bundle %s: %s", bundle, err)
-		}
-		res := DownloadedBundle{BundleHash: bundle, Data: bundleData}
-		bundlesBuffer[bundle] = res
-		if isChannelClosed(bundleUpdates) {
-			os.Exit(1)
-		}
-		bundleUpdates <- true
-	}
-
-	var wg sync.WaitGroup
-	for i, file := range filesToDownload {
-		wg.Add(1)
-		go func(file ankabuffer.File, bundlesBuffer map[string]DownloadedBundle, dir string, destDir string, i int) {
-			defer wg.Done()
-			var fileData []byte
-
-			if file.Chunks == nil || len(file.Chunks) == 0 { // file is not chunked
-				for _, bundle := range bundlesBuffer {
-					for _, chunk := range bundlesMap[bundle.BundleHash].Chunks {
-						if chunk.Hash == file.Hash {
-							fileData = bundle.Data[chunk.Offset : chunk.Offset+chunk.Size]
-							break
-						}
-					}
-					if fileData != nil {
-						break
-					}
+				bundleData, err := DownloadBundle(bundle)
+				if err != nil {
+					log.Errorf("Could not download bundle %s: %s\n", bundle, err)
+					return
 				}
-			} else { // file is chunked
-				type ChunkData struct {
-					Data   []byte
-					Offset int64
-					Size   int64
-				}
-				var chunksData []ChunkData
-				for _, chunk := range file.Chunks { // all chunks of the file
-					for _, bundle := range bundlesBuffer { // search in downloaded bundles for the chunk
-						foundChunk := false
-						for _, bundleChunk := range bundlesMap[bundle.BundleHash].Chunks { // each chunk of the searched bundle could be a chunk of the file
-							if bundleChunk.Hash == chunk.Hash {
-								foundChunk = true
-								if len(bundle.Data) < int(bundleChunk.Offset+bundleChunk.Size) {
-									err := fmt.Errorf("bundle data is too small. Bundle offset/size: %d/%d, BundleData length: %d, BundleHash: %s, BundleChunkHash: %s", bundleChunk.Offset, bundleChunk.Size, len(bundle.Data), bundle.BundleHash, bundleChunk.Hash)
-									log.Fatal(err)
-								}
 
-								chunksData = append(chunksData, ChunkData{Data: bundle.Data[bundleChunk.Offset : bundleChunk.Offset+bundleChunk.Size], Offset: chunk.Offset, Size: chunk.Size})
+				bundleDownloadMu.Lock()
+				bundlesBuffer[bundle] = DownloadedBundle{BundleHash: bundle, Data: bundleData}
+				bundleDownloadMu.Unlock()
+
+				if isChannelClosed(bundleUpdates) {
+					os.Exit(1)
+				}
+				bundleUpdates <- true
+			}(bundle)
+		}
+
+		bundleDownloadWg.Wait()
+
+		var wg sync.WaitGroup
+		for i, file := range filesToDownload {
+			wg.Add(1)
+			go func(file ankabuffer.File, bundlesBuffer map[string]DownloadedBundle, dir string, destDir string, i int) {
+				defer wg.Done()
+				var fileData []byte
+
+				if file.Chunks == nil || len(file.Chunks) == 0 { // file is not chunked
+					for _, bundle := range bundlesBuffer {
+						for _, chunk := range bundlesMap[bundle.BundleHash].Chunks {
+							if chunk.Hash == file.Hash {
+								fileData = bundle.Data[chunk.Offset : chunk.Offset+chunk.Size]
+								break
 							}
 						}
-						if foundChunk {
+						if fileData != nil {
 							break
 						}
 					}
+				} else { // file is chunked
+					type ChunkData struct {
+						Data   []byte
+						Offset int64
+						Size   int64
+					}
+					var chunksData []ChunkData
+					for _, chunk := range file.Chunks { // all chunks of the file
+						for _, bundle := range bundlesBuffer { // search in downloaded bundles for the chunk
+							foundChunk := false
+							for _, bundleChunk := range bundlesMap[bundle.BundleHash].Chunks { // each chunk of the searched bundle could be a chunk of the file
+								if bundleChunk.Hash == chunk.Hash {
+									foundChunk = true
+									if len(bundle.Data) < int(bundleChunk.Offset+bundleChunk.Size) {
+										err := fmt.Errorf("bundle data is too small. Bundle offset/size: %d/%d, BundleData length: %d, BundleHash: %s, BundleChunkHash: %s", bundleChunk.Offset, bundleChunk.Size, len(bundle.Data), bundle.BundleHash, bundleChunk.Hash)
+										log.Fatal(err)
+									}
+
+									chunksData = append(chunksData, ChunkData{Data: bundle.Data[bundleChunk.Offset : bundleChunk.Offset+bundleChunk.Size], Offset: chunk.Offset, Size: chunk.Size})
+								}
+							}
+							if foundChunk {
+								break
+							}
+						}
+					}
+					sort.Slice(chunksData, func(i, j int) bool {
+						return chunksData[i].Offset < chunksData[j].Offset
+					})
+					//if len(chunksData) > 1 {
+					//	log.Println("Chunks data", chunksData[0].Offset, chunksData[len(chunksData)-1].Offset)
+					//}
+					for _, chunk := range chunksData {
+						fileData = append(fileData, chunk.Data...)
+					}
 				}
-				sort.Slice(chunksData, func(i, j int) bool {
-					return chunksData[i].Offset < chunksData[j].Offset
-				})
-				//if len(chunksData) > 1 {
-				//	log.Println("Chunks data", chunksData[0].Offset, chunksData[len(chunksData)-1].Offset)
-				//}
-				for _, chunk := range chunksData {
-					fileData = append(fileData, chunk.Data...)
-				}
-			}
 
-			if len(fileData) == 0 {
-				err := fmt.Errorf("file data is empty %s", file.Hash)
-				log.Fatal(err)
-			}
-
-			offlineFilePath := filepath.Join(destDir, toDownload[i].FriendlyName)
-
-			// anonymous function to safely defer closing file
-			func() {
-				fp, err := os.Create(offlineFilePath)
-				if err != nil {
+				if len(fileData) == 0 {
+					err := fmt.Errorf("file data is empty %s", file.Hash)
 					log.Fatal(err)
 				}
-				defer func() {
-					err := fp.Close()
+
+				offlineFilePath := filepath.Join(destDir, toDownload[i].FriendlyName)
+
+				// anonymous function to safely defer closing file
+				func() {
+					path := filepath.Dir(offlineFilePath)
+					_ = os.MkdirAll(path, os.ModePerm)
+
+					fp, err := os.Create(offlineFilePath)
 					if err != nil {
 						log.Fatal(err)
 					}
+					defer func() {
+						err := fp.Close()
+						if err != nil {
+							log.Fatal(err)
+						}
+					}()
+					_, err = fp.Write(fileData)
+					if err != nil {
+						log.Fatal(err)
+						return
+					}
 				}()
-				_, err = fp.Write(fileData)
-				if err != nil {
-					log.Fatal(err)
-					return
+
+				log.Infof("%s ✅", filepath.Base(file.Name))
+
+				if unpack {
+					Unpack(offlineFilePath, dir, destDir, title, indent, muteSpinner, silent)
+					err := os.Remove(offlineFilePath)
+					if err != nil {
+						log.Fatal(err)
+					}
 				}
-			}()
 
-			log.Infof("%s ✅", filepath.Base(file.Name))
+			}(file, bundlesBuffer, dir, destDir, i)
+		}
 
-			if unpack {
-				Unpack(offlineFilePath, dir, destDir, indent)
-				err := os.Remove(offlineFilePath)
-				if err != nil {
-					log.Fatal(err)
-				}
-			}
+		wg.Wait()
 
-		}(file, bundlesBuffer, dir, destDir, i)
+		if !isChannelClosed(bundleUpdates) {
+			bundleUpdates <- true
+		}
+
+		feedbackWg.Wait()
+
 	}
 
-	wg.Wait()
-
-	if !isChannelClosed(bundleUpdates) {
-		bundleUpdates <- true
-	}
-
-	feedbackWg.Wait()
 	return nil
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/charmbracelet/log"
@@ -68,38 +70,56 @@ func unpackD2pFolder(title string, inPath string, outPath string, headless bool)
 	wg.Wait()
 }
 
-func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, dir string, headless bool) error {
-	fileNames := []HashFile{
-		{Filename: "content/gfx/items/bitmap0.d2p", FriendlyName: "bitmaps_0.d2p"},
-		{Filename: "content/gfx/items/bitmap0_1.d2p", FriendlyName: "bitmaps_1.d2p"},
-		{Filename: "content/gfx/items/bitmap1.d2p", FriendlyName: "bitmaps_2.d2p"},
-		{Filename: "content/gfx/items/bitmap1_1.d2p", FriendlyName: "bitmaps_3.d2p"},
-		{Filename: "content/gfx/items/bitmap1_2.d2p", FriendlyName: "bitmaps_4.d2p"},
-	}
-
+func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int, dir string, headless bool) error {
 	inPath := filepath.Join(dir, "data", "tmp")
 	outPath := filepath.Join(dir, "data", "img", "item")
-	if err := DownloadUnpackFiles("Item Bitmaps", hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+
+	if version == 2 {
+		fileNames := []HashFile{
+			{Filename: "content/gfx/items/bitmap0.d2p", FriendlyName: "bitmaps_0.d2p"},
+			{Filename: "content/gfx/items/bitmap0_1.d2p", FriendlyName: "bitmaps_1.d2p"},
+			{Filename: "content/gfx/items/bitmap1.d2p", FriendlyName: "bitmaps_2.d2p"},
+			{Filename: "content/gfx/items/bitmap1_1.d2p", FriendlyName: "bitmaps_3.d2p"},
+			{Filename: "content/gfx/items/bitmap1_2.d2p", FriendlyName: "bitmaps_4.d2p"},
+		}
+
+		if err := DownloadUnpackFiles("Item Bitmaps", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+			return err
+		}
+
+		unpackD2pFolder("Item Bitmaps", inPath, outPath, headless)
+
+		fileNames = []HashFile{
+			{Filename: "content/gfx/items/vector0.d2p", FriendlyName: "vector_0.d2p"},
+			{Filename: "content/gfx/items/vector0_1.d2p", FriendlyName: "vector_1.d2p"},
+			{Filename: "content/gfx/items/vector1.d2p", FriendlyName: "vector_2.d2p"},
+			{Filename: "content/gfx/items/vector1_1.d2p", FriendlyName: "vector_3.d2p"},
+			{Filename: "content/gfx/items/vector1_2.d2p", FriendlyName: "vector_4.d2p"},
+		}
+
+		inPath = filepath.Join(dir, "data", "tmp", "vector")
+		outPath = filepath.Join(dir, "data", "vector", "item")
+		if err := DownloadUnpackFiles("Item Vectors", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+			return err
+		}
+
+		unpackD2pFolder("Item Vectors", inPath, outPath, headless)
+
+		return nil
+	} else if version == 3 {
+		fileNames := []HashFile{
+			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_.bundle", FriendlyName: "item_images.imagebundle"},
+			//{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_.bundle", FriendlyName: "mount_images.bundle"},
+		}
+
+		err := PullImages([]string{"stelzo/assetstudio-cli:latest"}, false, headless)
+		if err != nil {
+			return err
+		}
+
+		err = DownloadUnpackFiles("Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
 		return err
+	} else {
+		return errors.New("unsupported version: " + strconv.Itoa(version))
 	}
-
-	unpackD2pFolder("Item Bitmaps", inPath, outPath, headless)
-
-	fileNames = []HashFile{
-		{Filename: "content/gfx/items/vector0.d2p", FriendlyName: "vector_0.d2p"},
-		{Filename: "content/gfx/items/vector0_1.d2p", FriendlyName: "vector_1.d2p"},
-		{Filename: "content/gfx/items/vector1.d2p", FriendlyName: "vector_2.d2p"},
-		{Filename: "content/gfx/items/vector1_1.d2p", FriendlyName: "vector_3.d2p"},
-		{Filename: "content/gfx/items/vector1_2.d2p", FriendlyName: "vector_4.d2p"},
-	}
-
-	inPath = filepath.Join(dir, "data", "tmp", "vector")
-	outPath = filepath.Join(dir, "data", "vector", "item")
-	if err := DownloadUnpackFiles("Item Vectors", hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
-		return err
-	}
-
-	unpackD2pFolder("Item Vectors", inPath, outPath, headless)
-
-	return nil
 }
