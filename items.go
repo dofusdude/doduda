@@ -8,7 +8,7 @@ import (
 	"github.com/dofusdude/ankabuffer"
 )
 
-func DownloadItems(hashJson *ankabuffer.Manifest, version int, dir string, indent string, headless bool) error {
+func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir string, indent string, headless bool) error {
 	outPath := filepath.Join(dir, "data")
 
 	if version == 3 {
@@ -45,7 +45,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, version int, dir string, inden
 			return err
 		}
 
-		err = DownloadUnpackFiles("Items", hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err = DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
 		return err
 
 	} else if version == 2 {
@@ -78,7 +78,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, version int, dir string, inden
 			{Filename: "data/common/Titles.d2o", FriendlyName: "titles.d2o"},
 		}
 
-		err := DownloadUnpackFiles("Items", hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Items", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
 
 		return err
 	} else {

@@ -63,6 +63,10 @@ func main() {
 	}
 	log.SetLevel(parsedLevel)
 
+	rootCmd.Flags().Bool("full", false, "Download the full game like the Ankama Launcher.")
+	//rootCmd.Flags().Bool("incremental", false, "Only download a file if the local version is different.")
+	rootCmd.Flags().Int32("bin", 500, "Divide the files into smaller bins of the given size in Megabyte to reduce overall memory usage. Disable binning with -1.")
+	rootCmd.PersistentFlags().StringP("platform", "p", "windows", "For which platform to download the game. Available: 'windows', 'macos', 'linux'.")
 	rootCmd.PersistentFlags().Bool("headless", false, "Run without a TUI.")
 	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. Available: 'main', 'beta'.")
 	rootCmd.PersistentFlags().StringP("dir", "d", ".", "Working directory")
@@ -295,6 +299,35 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	fullGame, err := ccmd.Flags().GetBool("full")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	/*incremental, err := ccmd.Flags().GetBool("incremental")
+	if err != nil {
+		log.Fatal(err)
+	}*/
+
+	platform, err := ccmd.Flags().GetString("platform")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bin, err := ccmd.Flags().GetInt32("bin")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if platform == "macos" {
+		platform = "darwin"
+	}
+
+	supportedPlatforms := []string{"windows", "darwin", "linux"}
+	if !contains(supportedPlatforms, platform) {
+		log.Fatalf("Platform %s is not supported", platform)
+	}
+
 	indent, err := ccmd.Flags().GetBool("indent")
 	if err != nil {
 		log.Fatal(err)
@@ -339,7 +372,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 	} else {
 		indentation = ""
 	}
-	err = Download(isBeta, version, dir, manifest, workers, ignore, indentation, headless)
+	err = Download(isBeta, version, dir, fullGame, platform, int(bin), manifest, workers, ignore, indentation, headless)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

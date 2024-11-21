@@ -8,7 +8,7 @@ import (
 	"github.com/dofusdude/ankabuffer"
 )
 
-func DownloadQuests(hashJson *ankabuffer.Manifest, version int, dir string, indent string, headless bool) error {
+func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir string, indent string, headless bool) error {
 	outPath := filepath.Join(dir, "data")
 
 	if version == 2 {
@@ -21,7 +21,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, version int, dir string, inde
 			{Filename: "data/common/AlmanaxCalendars.d2o", FriendlyName: "almanax.d2o"},
 		}
 
-		err := DownloadUnpackFiles("Quests", hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Quests", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
 		return err
 	} else if version == 3 {
 		fileNames := []HashFile{
@@ -38,7 +38,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, version int, dir string, inde
 			return err
 		}
 
-		err = DownloadUnpackFiles("Quests", hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err = DownloadUnpackFiles("Quests", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))

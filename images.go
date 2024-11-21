@@ -70,7 +70,7 @@ func unpackD2pFolder(title string, inPath string, outPath string, headless bool)
 	wg.Wait()
 }
 
-func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, version int, dir string, headless bool) error {
+func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int, dir string, headless bool) error {
 	inPath := filepath.Join(dir, "data", "tmp")
 	outPath := filepath.Join(dir, "data", "img", "item")
 
@@ -83,7 +83,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, version int, dir stri
 			{Filename: "content/gfx/items/bitmap1_2.d2p", FriendlyName: "bitmaps_4.d2p"},
 		}
 
-		if err := DownloadUnpackFiles("Item Bitmaps", hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+		if err := DownloadUnpackFiles("Item Bitmaps", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
 			return err
 		}
 
@@ -99,7 +99,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, version int, dir stri
 
 		inPath = filepath.Join(dir, "data", "tmp", "vector")
 		outPath = filepath.Join(dir, "data", "vector", "item")
-		if err := DownloadUnpackFiles("Item Vectors", hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+		if err := DownloadUnpackFiles("Item Vectors", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
 			return err
 		}
 
@@ -117,7 +117,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, version int, dir stri
 			return err
 		}
 
-		err = DownloadUnpackFiles("Images", hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
+		err = DownloadUnpackFiles("Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))
