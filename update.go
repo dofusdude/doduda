@@ -202,7 +202,7 @@ func CreateDataDirectoryStructure(dir string) {
 	}
 }
 
-func GetReleaseManifest(version string, beta bool, platform string, gameVersion string, dir string) (ankabuffer.Manifest, error) {
+func GetReleaseManifest(version string, beta bool, platform string, dir string) ([]byte, error) {
 	var gameVersionType string
 	if beta {
 		gameVersionType = "beta"
@@ -213,18 +213,16 @@ func GetReleaseManifest(version string, beta bool, platform string, gameVersion 
 	hashResponse, err := http.Get(gameHashesUrl)
 	if err != nil {
 		log.Fatal("Could not get manifest file", err)
-		return ankabuffer.Manifest{}, err
+		return nil, err
 	}
 
 	hashBody, err := io.ReadAll(hashResponse.Body)
 	if err != nil {
 		log.Fatal("Could not read response body of manifest file", err)
-		return ankabuffer.Manifest{}, err
+		return nil, err
 	}
 
-	fileHashes := *ankabuffer.ParseManifest(hashBody, gameVersion)
-
-	return fileHashes, nil
+	return hashBody, nil
 }
 
 func contains(arr []string, str string) bool {
@@ -283,7 +281,7 @@ func Download(beta bool, version string, dir string, fullGame bool, platform str
 	if isChannelClosed(feedbacks) {
 		os.Exit(1)
 	}
-	feedbacks <- "Loading"
+	feedbacks <- "loading"
 
 	var manifestPath string
 	if manifest == "" {
@@ -321,10 +319,13 @@ func Download(beta bool, version string, dir string, fullGame bool, platform str
 
 		dofusVersion = strings.TrimPrefix(version, cytrusPrefix)
 
-		ankaManifest, err := GetReleaseManifest(version, beta, platform, dofusVersion, dir)
+		rawManifest, err := GetReleaseManifest(version, beta, platform, dir)
 		if err != nil {
 			return err
 		}
+
+		feedbacks <- "parsing"
+		ankaManifest = *ankabuffer.ParseManifest(rawManifest, dofusVersion)
 
 		marshalledBytes, err := json.Marshal(ankaManifest)
 		if err != nil {
