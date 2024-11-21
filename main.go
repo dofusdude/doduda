@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"path/filepath"
@@ -23,6 +24,15 @@ var (
 		SilenceErrors: true,
 		SilenceUsage:  false,
 		Run:           rootCommand,
+	}
+
+	versionCmd = &cobra.Command{
+		Use:           "version",
+		Short:         "Print the current Game version.",
+		Long:          ``,
+		SilenceErrors: true,
+		SilenceUsage:  false,
+		Run:           versionCommand,
 	}
 
 	parseCmd = &cobra.Command{
@@ -91,6 +101,8 @@ func main() {
 
 	renderCmd.Flags().String("incremental", "", "Start from the last version and only render missing images. The format must be <owner>/<repo>/<filename>")
 	rootCmd.AddCommand(renderCmd)
+
+	rootCmd.AddCommand(versionCmd)
 
 	err = rootCmd.Execute()
 	if err != nil && err.Error() != "" {
@@ -169,6 +181,53 @@ func parseWd(dir string) string {
 	}
 
 	return dir
+}
+
+func versionCommand(ccmd *cobra.Command, args []string) {
+	gameRelease, err := ccmd.Flags().GetString("release")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if gameRelease != "main" && gameRelease != "beta" {
+		fmt.Println("Invalid release type")
+		os.Exit(1)
+	}
+
+	beta := gameRelease == "beta"
+
+	headless, err := ccmd.Flags().GetBool("headless")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var manifestWg sync.WaitGroup
+	feedbacks := make(chan string)
+	if !headless {
+		manifestWg.Add(1)
+		go func() {
+			defer manifestWg.Done()
+			ui.Spinner("Manifest", feedbacks, false, headless)
+		}()
+
+		if isChannelClosed(feedbacks) {
+			os.Exit(1)
+		}
+		feedbacks <- "Loading"
+	}
+
+	cytrusPrefix := "6.0_"
+	version := GetLatestLauncherVersion(beta)
+	if !strings.HasPrefix(version, cytrusPrefix) {
+		version = fmt.Sprintf("%s%s", cytrusPrefix, version)
+	}
+
+	dofusVersion := strings.TrimPrefix(version, cytrusPrefix)
+
+	close(feedbacks)
+	manifestWg.Wait()
+
+	fmt.Println(dofusVersion)
 }
 
 func mapCommand(ccmd *cobra.Command, args []string) {
