@@ -412,7 +412,14 @@ func Download(beta bool, version string, dir string, clean bool, fullGame bool, 
 		CreateDataDirectoryStructure(dir)
 
 		if !contains(ignore, "languages") {
-			if err := DownloadLanguages(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+			var releaseVersion string
+			if beta {
+				releaseVersion = "beta"
+			} else {
+				releaseVersion = "main"
+			}
+
+			if err := DownloadLanguages(releaseVersion, &ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
