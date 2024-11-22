@@ -18,12 +18,13 @@ import (
 
 var (
 	DodudaVersion     = "v0.4.6"
+	DodudaShort       = "Unofficial Ankama Launcher CLI"
 	DodudaLong        = "The Ankama Launcher Terminal Client for Developers."
-	DodudaVersionHelp = DodudaLong + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
+	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
 
 	rootCmd = &cobra.Command{
 		Use:           "doduda",
-		Short:         "doduda – Unofficial Ankama Launcher CLI",
+		Short:         "doduda – " + DodudaShort,
 		Long:          DodudaLong,
 		SilenceErrors: true,
 		SilenceUsage:  false,
@@ -79,7 +80,7 @@ func main() {
 
 	rootCmd.Flags().Bool("version", false, "Print the doduda version.")
 	rootCmd.Flags().Bool("full", false, "Download the full game like the Ankama Launcher.")
-	rootCmd.PersistentFlags().BoolP("clean", "c", false, "Do not use cached manifest.")
+	rootCmd.PersistentFlags().BoolP("cache-ignore", "c", false, "Do not use cached manifest.")
 	//rootCmd.Flags().Bool("incremental", false, "Only download a file if the local version is different.")
 	rootCmd.Flags().Int32("bin", 500, "Divide the files into smaller bins of the given size in Megabyte to reduce overall memory usage. Disable binning with -1.")
 	rootCmd.PersistentFlags().StringP("platform", "p", "windows", "For which platform to download the game. Available: 'windows', 'macos', 'linux'.")

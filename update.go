@@ -357,7 +357,11 @@ func Download(beta bool, version string, dir string, clean bool, fullGame bool, 
 		log.Fatal("Invalid version")
 	}
 
-	feedbacks <- fmt.Sprintf("v%s", dofusVersion)
+	betaSuffix := ""
+	if beta {
+		betaSuffix = " [beta]"
+	}
+	feedbacks <- dofusVersion + betaSuffix
 
 	close(feedbacks)
 	manifestWg.Wait()
