@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"image"
 	_ "image/jpeg"
 	"image/png"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"golang.org/x/image/draw"
 
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/ui"
@@ -125,6 +127,22 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 			return err
 		}
 
+		feedbacks := make(chan string)
+
+		var feedbackWg sync.WaitGroup
+		feedbackWg.Add(1)
+		go func() {
+			defer feedbackWg.Done()
+			ui.Spinner("Images", feedbacks, false, headless)
+		}()
+
+		defer func() {
+			close(feedbacks)
+			feedbackWg.Wait()
+		}()
+
+		feedbacks <- "cleaning"
+
 		err = filepath.Walk(outPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				log.Error("Error accessing file", "err", err)
@@ -159,13 +177,46 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 
 			if strings.Contains(info.Name(), "_") {
 				oldPath := path
-				newPath := filepath.Join(filepath.Dir(path), strings.Split(info.Name(), "_")[0]+".png")
+				path = filepath.Join(filepath.Dir(path), strings.Split(info.Name(), "_")[0]+".png")
 
-				err = os.Rename(oldPath, newPath)
+				err = os.Rename(oldPath, path)
 				if err != nil {
 					log.Error("Renaming file failed", "err", err)
 					return err
 				}
+			}
+
+			sdPath := strings.Replace(path, ".png", "-200.png", 1)
+			err = os.Rename(path, sdPath)
+			if err != nil {
+				return err
+			}
+
+			// -- icon --
+			file, err = os.Open(sdPath)
+			if err != nil {
+				log.Error("Error opening file", "err", err)
+				return err
+			}
+			defer file.Close()
+
+			srcImage, err := png.Decode(file)
+			if err != nil {
+				return err
+			}
+
+			destImage := image.NewRGBA(image.Rect(0, 0, 60, 60))
+			draw.CatmullRom.Scale(destImage, destImage.Bounds(), srcImage, srcImage.Bounds(), draw.Over, nil)
+
+			outputFile, err := os.Create(path)
+			if err != nil {
+				return err
+			}
+			defer outputFile.Close()
+
+			err = png.Encode(outputFile, destImage)
+			if err != nil {
+				return err
 			}
 
 			return nil
