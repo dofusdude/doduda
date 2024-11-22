@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -902,16 +901,11 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 
 		var bundleDownloadWg sync.WaitGroup
 		var bundleDownloadMu sync.Mutex
-		maxGoroutines := runtime.NumCPU() * 10
-		sem := make(chan struct{}, maxGoroutines)
 
 		for _, bundle := range bundles {
 			bundleDownloadWg.Add(1)
 			go func(bundle string) {
 				defer bundleDownloadWg.Done()
-
-				sem <- struct{}{}
-				defer func() { <-sem }()
 
 				bundleData, err := DownloadBundle(bundle)
 				if err != nil {
