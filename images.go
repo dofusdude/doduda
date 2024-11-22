@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"image"
+	"fmt"
 	_ "image/jpeg"
 	"image/png"
 	"os"
@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"golang.org/x/image/draw"
 
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/ui"
@@ -75,6 +74,62 @@ func unpackD2pFolder(title string, inPath string, outPath string, headless bool)
 	wg.Wait()
 }
 
+func cleanImages(dir string, resolution int) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Error("Error accessing file", "err", err)
+			return err
+		}
+
+		if info.IsDir() || filepath.Ext(path) != ".png" {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			log.Error("Error opening file", "err", err)
+			return err
+		}
+		defer file.Close()
+
+		img, err := png.DecodeConfig(file)
+		if err != nil {
+			log.Errorf("Error decoding image, skipping %s\n", path)
+			return nil
+		}
+
+		if img.Width != resolution || img.Height != resolution {
+			err = os.Remove(path)
+			if err != nil {
+				log.Errorf("Error removing file: %s\n", path)
+				return err
+			}
+			return nil
+		}
+
+		if strings.Contains(info.Name(), "_") {
+			oldPath := path
+			path = filepath.Join(filepath.Dir(path), strings.Split(info.Name(), "_")[0]+".png")
+
+			err = os.Rename(oldPath, path)
+			if err != nil {
+				log.Error("Renaming file failed", "err", err)
+				return err
+			}
+		}
+
+		sdPath := strings.Replace(path, ".png", fmt.Sprintf("-%d.png", resolution), 1)
+		err = os.Rename(path, sdPath)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int, dir string, headless bool) error {
 	inPath := filepath.Join(dir, "tmp")
 	outPath := filepath.Join(dir, "img", "item")
@@ -113,7 +168,8 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 		return nil
 	} else if version == 3 {
 		fileNames := []HashFile{
-			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_.bundle", FriendlyName: "item_images.imagebundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_assets_1x.bundle", FriendlyName: "item_images_1.imagebundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_assets_2x.bundle", FriendlyName: "item_images_2.imagebundle"},
 			//{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_.bundle", FriendlyName: "mount_images.bundle"},
 		}
 
@@ -143,84 +199,40 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 
 		feedbacks <- "cleaning"
 
-		err = filepath.Walk(outPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				log.Error("Error accessing file", "err", err)
-				return err
+		err = os.Rename(filepath.Join(outPath, "Assets", "BuiltAssets", "items", "1x"), filepath.Join(outPath, "1x"))
+		if err != nil {
+			return err
+		}
+
+		err = os.Rename(filepath.Join(outPath, "Assets", "BuiltAssets", "items", "2x"), filepath.Join(outPath, "2x"))
+		if err != nil {
+			return err
+		}
+
+		err = os.RemoveAll(filepath.Join(outPath, "Assets"))
+		if err != nil {
+			return err
+		}
+
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if cleanImages(filepath.Join(outPath, "1x"), 64) != nil {
+				log.Error("Error cleaning images", "err", err)
 			}
+		}()
 
-			if info.IsDir() || filepath.Ext(path) != ".png" {
-				return nil
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if cleanImages(filepath.Join(outPath, "2x"), 128) != nil {
+				log.Error("Error cleaning images", "err", err)
 			}
+		}()
 
-			file, err := os.Open(path)
-			if err != nil {
-				log.Error("Error opening file", "err", err)
-				return err
-			}
-			defer file.Close()
-
-			img, err := png.DecodeConfig(file)
-			if err != nil {
-				log.Errorf("Error decoding image, skipping %s\n", path)
-				return nil
-			}
-
-			if img.Width != 200 || img.Height != 200 {
-				err = os.Remove(path)
-				if err != nil {
-					log.Errorf("Error removing file: %s\n", path)
-					return err
-				}
-				return nil
-			}
-
-			if strings.Contains(info.Name(), "_") {
-				oldPath := path
-				path = filepath.Join(filepath.Dir(path), strings.Split(info.Name(), "_")[0]+".png")
-
-				err = os.Rename(oldPath, path)
-				if err != nil {
-					log.Error("Renaming file failed", "err", err)
-					return err
-				}
-			}
-
-			sdPath := strings.Replace(path, ".png", "-200.png", 1)
-			err = os.Rename(path, sdPath)
-			if err != nil {
-				return err
-			}
-
-			// -- icon --
-			file, err = os.Open(sdPath)
-			if err != nil {
-				log.Error("Error opening file", "err", err)
-				return err
-			}
-			defer file.Close()
-
-			srcImage, err := png.Decode(file)
-			if err != nil {
-				return err
-			}
-
-			destImage := image.NewRGBA(image.Rect(0, 0, 60, 60))
-			draw.CatmullRom.Scale(destImage, destImage.Bounds(), srcImage, srcImage.Bounds(), draw.Over, nil)
-
-			outputFile, err := os.Create(path)
-			if err != nil {
-				return err
-			}
-			defer outputFile.Close()
-
-			err = png.Encode(outputFile, destImage)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
+		wg.Wait()
 
 		return err
 	} else {
