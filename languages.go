@@ -33,7 +33,7 @@ func DownloadLanguageFiles(release string, hashJson *ankabuffer.Manifest, bin in
 		feedbackWg.Add(1)
 		go func() {
 			defer feedbackWg.Done()
-			ui.Spinner("Languages", feedbacks, true, headless)
+			ui.Spinner("Languages", feedbacks, false, headless)
 		}()
 
 		feedbacks <- "searching"

@@ -548,7 +548,7 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 		feedbackWg.Add(1)
 		go func() {
 			defer feedbackWg.Done()
-			ui.Spinner("Docker", feedbacks, true, headless)
+			ui.Spinner("Docker", feedbacks, false, headless)
 		}()
 	}
 
@@ -859,7 +859,7 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 			feedbackWg.Add(1)
 			go func() {
 				defer feedbackWg.Done()
-				ui.Spinner(innerTitle, feedbacks, true, silent)
+				ui.Spinner(innerTitle, feedbacks, false, silent)
 			}()
 		}
 
