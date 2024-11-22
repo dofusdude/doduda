@@ -2,9 +2,12 @@ package main
 
 import (
 	"errors"
+	_ "image/jpeg"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/charmbracelet/log"
@@ -118,6 +121,56 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 		}
 
 		err = DownloadUnpackFiles("Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
+		if err != nil {
+			return err
+		}
+
+		err = filepath.Walk(outPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				log.Error("Error accessing file", "err", err)
+				return err
+			}
+
+			if info.IsDir() || filepath.Ext(path) != ".png" {
+				return nil
+			}
+
+			file, err := os.Open(path)
+			if err != nil {
+				log.Error("Error opening file", "err", err)
+				return err
+			}
+			defer file.Close()
+
+			img, err := png.DecodeConfig(file)
+			if err != nil {
+				log.Errorf("Error decoding image, skipping %s\n", path)
+				return nil
+			}
+
+			if img.Width != 200 || img.Height != 200 {
+				err = os.Remove(path)
+				if err != nil {
+					log.Errorf("Error removing file: %s\n", path)
+					return err
+				}
+				return nil
+			}
+
+			if strings.Contains(info.Name(), "_") {
+				oldPath := path
+				newPath := filepath.Join(filepath.Dir(path), strings.Split(info.Name(), "_")[0]+".png")
+
+				err = os.Rename(oldPath, newPath)
+				if err != nil {
+					log.Error("Renaming file failed", "err", err)
+					return err
+				}
+			}
+
+			return nil
+		})
+
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))
