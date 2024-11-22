@@ -6,6 +6,9 @@
   </p>
 </p>
 
+> [!NOTE]
+> Dofus 3 support is heavily under development. While the mapped data is not yet available, `doduda` already understands and exports Unity data. Try `doduda --release beta` or the [dofus3-beta](https://github.com/dofusdude/dofus3-beta) data repository.
+
 Download the latest Dofus 2 version from Ankama and convert the interesting parts to a developer friendly format.
 
 ```bash
