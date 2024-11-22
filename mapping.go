@@ -75,7 +75,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		updatesChan <- "Items " + ui.HelpStyle("mapping")
 	}
 	mappedItems := mapping.MapItems(gameData, &languageData)
-	mappedItemPath := filepath.Join(dir, "data", "MAPPED_ITEMS.json")
+	mappedItemPath := filepath.Join(dir, "MAPPED_ITEMS.json")
 	marshalSave(mappedItems, mappedItemPath, indent)
 
 	if isChannelClosed(updatesChan) {
@@ -87,7 +87,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		updatesChan <- "Mounts " + ui.HelpStyle("mapping")
 	}
 	mappedMounts := mapping.MapMounts(gameData, &languageData)
-	mappedMountsPath := filepath.Join(dir, "data", "MAPPED_MOUNTS.json")
+	mappedMountsPath := filepath.Join(dir, "MAPPED_MOUNTS.json")
 	marshalSave(mappedMounts, mappedMountsPath, indent)
 
 	if isChannelClosed(updatesChan) {
@@ -99,7 +99,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		updatesChan <- "Almanax " + ui.HelpStyle("mapping")
 	}
 	mappedAlmanax := mapping.MapAlmanax(gameData, &languageData)
-	mappedAlmanaxPath := filepath.Join(dir, "data", "MAPPED_ALMANAX.json")
+	mappedAlmanaxPath := filepath.Join(dir, "MAPPED_ALMANAX.json")
 	marshalSave(mappedAlmanax, mappedAlmanaxPath, indent)
 
 	if isChannelClosed(updatesChan) {
@@ -107,7 +107,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	}
 	updatesChan <- "Sets " + ui.HelpStyle("mapping")
 	mappedSets := mapping.MapSets(gameData, &languageData)
-	mappedSetsPath := filepath.Join(dir, "data", "MAPPED_SETS.json")
+	mappedSetsPath := filepath.Join(dir, "MAPPED_SETS.json")
 	marshalSave(mappedSets, mappedSetsPath, indent)
 
 	if isChannelClosed(updatesChan) {
@@ -119,7 +119,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		updatesChan <- "Recipes " + ui.HelpStyle("mapping")
 	}
 	mappedRecipes := mapping.MapRecipes(gameData)
-	mappedRecipesPath := filepath.Join(dir, "data", "MAPPED_RECIPES.json")
+	mappedRecipesPath := filepath.Join(dir, "MAPPED_RECIPES.json")
 	marshalSave(mappedRecipes, mappedRecipesPath, indent)
 
 	if persistenceDir != "" {

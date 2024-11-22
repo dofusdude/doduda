@@ -105,7 +105,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 			var image HashFile
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
-			outPath := filepath.Join(dir, "data", "img", "mount")
+			outPath := filepath.Join(dir, "img", "mount")
 			_ = DownloadUnpackFiles("Mount Bitmaps", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
 		}(mount.Id, &wg, dir)
 
@@ -121,7 +121,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 			var image HashFile
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
-			outPath := filepath.Join(dir, "data", "vector", "mount")
+			outPath := filepath.Join(dir, "vector", "mount")
 			_ = DownloadUnpackFiles("Mount Vectors", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
 		}(mount.Id, &wg, dir)
 
@@ -178,24 +178,24 @@ func touchFileIfNotExists(fileName string) error {
 }
 
 func CreateDataDirectoryStructure(dir string) {
-	os.MkdirAll(fmt.Sprintf("%s/data/tmp/vector", dir), os.ModePerm)
-	os.MkdirAll(fmt.Sprintf("%s/data/img/item", dir), os.ModePerm)
-	os.MkdirAll(fmt.Sprintf("%s/data/img/mount", dir), os.ModePerm)
+	os.MkdirAll(fmt.Sprintf("%s/tmp/vector", dir), os.ModePerm)
+	os.MkdirAll(fmt.Sprintf("%s/img/item", dir), os.ModePerm)
+	os.MkdirAll(fmt.Sprintf("%s/img/mount", dir), os.ModePerm)
 
-	os.MkdirAll(fmt.Sprintf("%s/data/vector/item", dir), os.ModePerm)
-	os.MkdirAll(fmt.Sprintf("%s/data/vector/mount", dir), os.ModePerm)
+	os.MkdirAll(fmt.Sprintf("%s/vector/item", dir), os.ModePerm)
+	os.MkdirAll(fmt.Sprintf("%s/vector/mount", dir), os.ModePerm)
 
-	os.MkdirAll(fmt.Sprintf("%s/data/languages", dir), os.ModePerm)
+	os.MkdirAll(fmt.Sprintf("%s/languages", dir), os.ModePerm)
 
-	err := touchFileIfNotExists(fmt.Sprintf("%s/data/img/index.html", dir))
+	err := touchFileIfNotExists(fmt.Sprintf("%s/img/index.html", dir))
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = touchFileIfNotExists("data/img/item/index.html")
+	err = touchFileIfNotExists(fmt.Sprintf("%s/img/item/index.html", dir))
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = touchFileIfNotExists("data/img/mount/index.html")
+	err = touchFileIfNotExists(fmt.Sprintf("%s/img/mount/index.html", dir))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func humanFileSize(bytes float64, decimal bool, precision int) string {
 	return fmt.Sprintf("%.*f %s", precision, bytes, units[u])
 }
 
-func Download(beta bool, version string, dir string, fullGame bool, platform string, bin int, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
+func Download(beta bool, version string, dir string, clean bool, fullGame bool, platform string, bin int, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
 	var ankaManifest ankabuffer.Manifest
 	manifestSearchPath := "manifest.json"
 
@@ -305,7 +305,7 @@ func Download(beta bool, version string, dir string, fullGame bool, platform str
 
 	var dofusVersion string
 
-	if manifestPath == "" {
+	if manifestPath == "" || clean {
 		cytrusPrefix := "6.0_"
 		if version == "latest" {
 			version = GetLatestLauncherVersion(beta)
@@ -399,7 +399,7 @@ func Download(beta bool, version string, dir string, fullGame bool, platform str
 		for fragmentName, files := range fragmentFiles {
 			fragmentCounter++
 			feedbacks <- "Fragment " + strconv.Itoa(fragmentCounter) + "/" + strconv.Itoa(totalFragments)
-			err = DownloadUnpackFiles(ankaManifest.GameVersion, bin, &ankaManifest, fragmentName, files, dir, path.Join("data", ankaManifest.GameVersion), false, "", headless, false)
+			err = DownloadUnpackFiles(ankaManifest.GameVersion, bin, &ankaManifest, fragmentName, files, dir, dir, false, "", headless, false)
 			if err != nil {
 				return err
 			}
@@ -444,7 +444,7 @@ func Download(beta bool, version string, dir string, fullGame bool, platform str
 			DownloadMountsImages(gamedata, bin, &ankaManifest, mountsWorker, dir, headless)
 		}
 
-		os.RemoveAll(fmt.Sprintf("%s/data/tmp", dir))
+		os.RemoveAll(fmt.Sprintf("%s/tmp", dir))
 	}
 
 	return nil

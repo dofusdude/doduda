@@ -9,7 +9,7 @@ import (
 )
 
 func DownloadLanguageFiles(hashJson *ankabuffer.Manifest, bin int, version int, lang string, dir string, indent string, headless bool) error {
-	destPath := filepath.Join(dir, "data", "languages")
+	destPath := filepath.Join(dir, "languages")
 
 	if version == 2 {
 		var langFile HashFile

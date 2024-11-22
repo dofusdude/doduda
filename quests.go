@@ -2,14 +2,13 @@ package main
 
 import (
 	"errors"
-	"path/filepath"
 	"strconv"
 
 	"github.com/dofusdude/ankabuffer"
 )
 
 func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir string, indent string, headless bool) error {
-	outPath := filepath.Join(dir, "data")
+	outPath := dir
 
 	if version == 2 {
 		fileNames := []HashFile{

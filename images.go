@@ -71,8 +71,8 @@ func unpackD2pFolder(title string, inPath string, outPath string, headless bool)
 }
 
 func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int, dir string, headless bool) error {
-	inPath := filepath.Join(dir, "data", "tmp")
-	outPath := filepath.Join(dir, "data", "img", "item")
+	inPath := filepath.Join(dir, "tmp")
+	outPath := filepath.Join(dir, "img", "item")
 
 	if version == 2 {
 		fileNames := []HashFile{
@@ -97,8 +97,8 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 			{Filename: "content/gfx/items/vector1_2.d2p", FriendlyName: "vector_4.d2p"},
 		}
 
-		inPath = filepath.Join(dir, "data", "tmp", "vector")
-		outPath = filepath.Join(dir, "data", "vector", "item")
+		inPath = filepath.Join(dir, "tmp", "vector")
+		outPath = filepath.Join(dir, "vector", "item")
 		if err := DownloadUnpackFiles("Item Vectors", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
 			return err
 		}

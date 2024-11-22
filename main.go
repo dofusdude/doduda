@@ -74,12 +74,13 @@ func main() {
 	log.SetLevel(parsedLevel)
 
 	rootCmd.Flags().Bool("full", false, "Download the full game like the Ankama Launcher.")
+	rootCmd.PersistentFlags().BoolP("clean", "c", false, "Do not use cached manifest.")
 	//rootCmd.Flags().Bool("incremental", false, "Only download a file if the local version is different.")
 	rootCmd.Flags().Int32("bin", 500, "Divide the files into smaller bins of the given size in Megabyte to reduce overall memory usage. Disable binning with -1.")
 	rootCmd.PersistentFlags().StringP("platform", "p", "windows", "For which platform to download the game. Available: 'windows', 'macos', 'linux'.")
 	rootCmd.PersistentFlags().Bool("headless", false, "Run without a TUI.")
 	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. Available: 'main', 'beta'.")
-	rootCmd.PersistentFlags().StringP("dir", "d", ".", "Working directory")
+	rootCmd.PersistentFlags().StringP("output", "o", "./data", "Working folder for output or input.")
 	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
 	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'itemsimages', 'mountsimages', 'quests'.")
@@ -177,7 +178,10 @@ func parseWd(dir string) string {
 
 	// check if dir exists
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		log.Fatal(err)
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	return dir
@@ -213,7 +217,7 @@ func versionCommand(ccmd *cobra.Command, args []string) {
 		if isChannelClosed(feedbacks) {
 			os.Exit(1)
 		}
-		feedbacks <- "Loading"
+		feedbacks <- "loading"
 	}
 
 	cytrusPrefix := "6.0_"
@@ -231,7 +235,7 @@ func versionCommand(ccmd *cobra.Command, args []string) {
 }
 
 func mapCommand(ccmd *cobra.Command, args []string) {
-	dir, err := ccmd.Flags().GetString("dir")
+	dir, err := ccmd.Flags().GetString("output")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -276,7 +280,7 @@ func mapCommand(ccmd *cobra.Command, args []string) {
 }
 
 func watchdogCommand(ccmd *cobra.Command, args []string) {
-	dir, err := ccmd.Flags().GetString("dir")
+	dir, err := ccmd.Flags().GetString("output")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -363,6 +367,11 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	clean, err := ccmd.Flags().GetBool("clean")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	/*incremental, err := ccmd.Flags().GetBool("incremental")
 	if err != nil {
 		log.Fatal(err)
@@ -397,7 +406,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	dir, err := ccmd.Flags().GetString("dir")
+	dir, err := ccmd.Flags().GetString("output")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -431,7 +440,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 	} else {
 		indentation = ""
 	}
-	err = Download(isBeta, version, dir, fullGame, platform, int(bin), manifest, workers, ignore, indentation, headless)
+	err = Download(isBeta, version, dir, clean, fullGame, platform, int(bin), manifest, workers, ignore, indentation, headless)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

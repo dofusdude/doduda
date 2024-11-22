@@ -99,7 +99,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 				if isChannelClosed(updateChan) {
 					os.Exit(1)
 				}
-				updateChan <- "Loading latest " + filename
+				updateChan <- "loading latest " + filename
 
 				imagesResponse, err := http.Get(assetUrl)
 				if err != nil {
