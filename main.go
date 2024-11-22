@@ -17,10 +17,14 @@ import (
 )
 
 var (
+	DodudaVersion     = "v0.4.6"
+	DodudaLong        = "The Ankama Launcher Terminal Client for Developers."
+	DodudaVersionHelp = DodudaLong + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
+
 	rootCmd = &cobra.Command{
 		Use:           "doduda",
-		Short:         "doduda – Ankama data gathering CLI",
-		Long:          `A CLI for Ankama data gathering, versioning, parsing and more.`,
+		Short:         "doduda – Unofficial Ankama Launcher CLI",
+		Long:          DodudaLong,
 		SilenceErrors: true,
 		SilenceUsage:  false,
 		Run:           rootCommand,
@@ -73,6 +77,7 @@ func main() {
 	}
 	log.SetLevel(parsedLevel)
 
+	rootCmd.Flags().Bool("version", false, "Print the doduda version.")
 	rootCmd.Flags().Bool("full", false, "Download the full game like the Ankama Launcher.")
 	rootCmd.PersistentFlags().BoolP("clean", "c", false, "Do not use cached manifest.")
 	//rootCmd.Flags().Bool("incremental", false, "Only download a file if the local version is different.")
@@ -85,7 +90,7 @@ func main() {
 	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'itemsimages', 'mountsimages', 'quests'.")
 	rootCmd.PersistentFlags().BoolP("indent", "I", false, "Indent the JSON output (increases file size)")
-	rootCmd.PersistentFlags().StringP("version", "v", "latest", "Specify Dofus version to download. Example: 2.60.0")
+	rootCmd.PersistentFlags().String("dofus-version", "latest", "Specify Dofus version to download. Example: 2.60.0")
 
 	parseCmd.Flags().String("persistence-dir", "", "Use this directory for persistent data that can be changed while parsing after version updates.")
 	rootCmd.AddCommand(parseCmd)
@@ -357,6 +362,16 @@ func watchdogCommand(ccmd *cobra.Command, args []string) {
 func rootCommand(ccmd *cobra.Command, args []string) {
 	var err error
 
+	printVersion, err := ccmd.Flags().GetBool("version")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if printVersion {
+		fmt.Println(DodudaVersionHelp)
+		return
+	}
+
 	gameRelease, err := ccmd.Flags().GetString("release")
 	if err != nil {
 		log.Fatal(err)
@@ -428,7 +443,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	version, err := ccmd.Flags().GetString("version")
+	version, err := ccmd.Flags().GetString("dofus-version")
 	if err != nil {
 		log.Fatal(err)
 	}
