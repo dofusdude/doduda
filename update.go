@@ -602,9 +602,14 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 
 		cmd := []string{"./data", "--unity-version", "2022.3.29f1"}
 
+		uid := strconv.Itoa(os.Getuid())
+		gid := strconv.Itoa(os.Getgid())
+		user := uid + ":" + gid
+
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image: imageName,
 			Cmd:   cmd,
+			User:  user,
 			Volumes: map[string]struct{}{
 				"/app/AssetStudio/data":     {},
 				"/app/AssetStudio/ASExport": {},
@@ -733,7 +738,6 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 	if suffix == "imagebundle" {
 		dir := filepath.Dir(file)
 		err := UnpackUnityImages(dir, destDir, muteSpinner, headless)
-		// TODO clean the doubled images, only take where the image is cropped
 		if err != nil {
 			log.Fatal(err)
 		}

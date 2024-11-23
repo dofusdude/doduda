@@ -55,6 +55,11 @@ func DownloadLanguageFiles(release string, hashJson *ankabuffer.Manifest, bin in
 			return err
 		}
 
+		// check if assets exists
+		if _, ok := v["assets"]; !ok {
+			return errors.New("Could not find assets in the latest release.")
+		}
+
 		assets := v["assets"].([]interface{})
 		found := false
 		for _, asset := range assets {

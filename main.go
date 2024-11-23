@@ -17,14 +17,14 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.4.6"
-	DodudaShort       = "Unofficial Ankama Launcher CLI"
+	DodudaVersion     = "v0.4.7"
+	DodudaShort       = "doduda - Unofficial Ankama Launcher CLI"
 	DodudaLong        = "The Ankama Launcher Terminal Client for Developers."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
 
 	rootCmd = &cobra.Command{
 		Use:           "doduda",
-		Short:         "doduda – " + DodudaShort,
+		Short:         DodudaShort,
 		Long:          DodudaLong,
 		SilenceErrors: true,
 		SilenceUsage:  false,
@@ -383,7 +383,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	clean, err := ccmd.Flags().GetBool("clean")
+	clean, err := ccmd.Flags().GetBool("cache-ignore")
 	if err != nil {
 		log.Fatal(err)
 	}
