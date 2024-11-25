@@ -1,41 +1,42 @@
 name: Persistence Update
 
 on:
-    workflow_dispatch:
-      inputs:
-        version:
-          description: 'Game version'
-          required: true
-        release:
-          description: 'Game release'
-          required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Game version"
+        required: true
+      release:
+        description: "Game release"
+        required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - 
-      uses: actions/checkout@v3
-    - 
-      name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
-    - 
-      name: Build
-      run: go build -v .
-    - 
-      name: Run and Update
-      run: |
-        ./doduda --headless --ignore mountsimages --ignore itemsimages --release ${{ github.event.inputs.release }}
-        ./doduda map --headless --persistence-dir persistent
-        git config --global user.name 'stelzo'
-        git config --global user.email 'stelzo@users.noreply.github.com'
-        git add persistent
-        git commit -m "update persistent files" || true
-        git push
-    - 
-      name: Notify repository
-      env:
-        GH_TOKEN: ${{ secrets.PAT }}
-      run: gh workflow run release --repo dofusdude/dofus2-${{ github.event.inputs.release }} -f version=${{ github.event.inputs.version }}
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+      - name: Build
+        run: go build -v .
+      - name: Run and Update
+        run: |
+          ./doduda --headless --ignore mountsimages --ignore itemsimages --release ${{ github.event.inputs.release }}
+          ./doduda map --headless --persistence-dir persistent
+          git config --global user.name 'stelzo'
+          git config --global user.email 'stelzo@users.noreply.github.com'
+          git add persistent
+          git commit -m "update persistent files" || true
+          git push
+      - name: Notify Dofus 2 repository
+        if: startsWith(github.event.inputs.version, '2')
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: gh workflow run release --repo dofusdude/dofus2-${{ github.event.inputs.release }} -f version=${{ github.event.inputs.version }}
+      - name: Notify Dofus 3 language repository
+        if: startsWith(github.event.inputs.version, '3')
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: gh workflow run release --repo dofusdude/dofus3-lang-${{ github.event.inputs.release }}
