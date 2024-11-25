@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,7 +33,31 @@ func marshalSave(data interface{}, path string, indent string) {
 	out.Write(outBytes)
 }
 
+func detectRawDataMajorVersion(dir string) (int, error) {
+	file, err := os.ReadFile(filepath.Join(dir, "areas.json"))
+	if err != nil {
+		fmt.Print(err)
+	}
+	var areasJson interface{}
+	err = json.Unmarshal(file, &areasJson)
+	if err != nil {
+		return 0, err
+	}
+
+	if _, ok := areasJson.(map[string]interface{}); ok {
+		return 3, nil
+	} else if _, ok := areasJson.([]interface{}); ok {
+		return 2, nil
+	}
+
+	return 0, errors.New("Could not detect major version of raw data")
+}
+
 func Map(dir string, indent string, persistenceDir string, release string, headless bool) {
+	majorVersion, err := detectRawDataMajorVersion(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	updatesChan := make(chan string)
 	spinnerWg := sync.WaitGroup{}
@@ -46,81 +71,163 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		os.Exit(1)
 	}
 	updatesChan <- "Load persistence"
-	err := mapping.LoadPersistedElements(persistenceDir, release)
+	// TODO persistence strings probably changed?
+	err = mapping.LoadPersistedElements(persistenceDir, release)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	var gameData *mapping.JSONGameData
-	var languageData map[string]mapping.LangDict
 
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
 	}
 	updatesChan <- "Game data"
-	gameData = mapping.ParseRawData(dir)
 
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	updatesChan <- "Languages"
-	languageData = mapping.ParseRawLanguages(dir)
+	if majorVersion == 2 {
+		var gameData *mapping.JSONGameData
+		var languageData map[string]mapping.LangDict
 
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	if headless {
-		updatesChan <- "Items mapping"
+		gameData = mapping.ParseRawData(dir)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		updatesChan <- "Languages"
+		languageData = mapping.ParseRawLanguages(dir)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Items mapping"
+		} else {
+			updatesChan <- "Items " + ui.HelpStyle("mapping")
+		}
+		mappedItems := mapping.MapItems(gameData, &languageData)
+		mappedItemPath := filepath.Join(dir, "MAPPED_ITEMS.json")
+		marshalSave(mappedItems, mappedItemPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Mounts mapping"
+		} else {
+			updatesChan <- "Mounts " + ui.HelpStyle("mapping")
+		}
+		mappedMounts := mapping.MapMounts(gameData, &languageData)
+		mappedMountsPath := filepath.Join(dir, "MAPPED_MOUNTS.json")
+		marshalSave(mappedMounts, mappedMountsPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Almanax mapping"
+		} else {
+			updatesChan <- "Almanax " + ui.HelpStyle("mapping")
+		}
+		mappedAlmanax := mapping.MapAlmanax(gameData, &languageData)
+		mappedAlmanaxPath := filepath.Join(dir, "MAPPED_ALMANAX.json")
+		marshalSave(mappedAlmanax, mappedAlmanaxPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Sets mapping"
+		} else {
+			updatesChan <- "Sets " + ui.HelpStyle("mapping")
+		}
+		mappedSets := mapping.MapSets(gameData, &languageData)
+		mappedSetsPath := filepath.Join(dir, "MAPPED_SETS.json")
+		marshalSave(mappedSets, mappedSetsPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Recipes mapping"
+		} else {
+			updatesChan <- "Recipes " + ui.HelpStyle("mapping")
+		}
+		mappedRecipes := mapping.MapRecipes(gameData)
+		mappedRecipesPath := filepath.Join(dir, "MAPPED_RECIPES.json")
+		marshalSave(mappedRecipes, mappedRecipesPath, indent)
+	} else if majorVersion == 3 {
+		var gameData *mapping.JSONGameDataUnity
+		var languageData map[string]mapping.LangDictUnity
+
+		gameData = mapping.ParseRawDataUnity(dir)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		updatesChan <- "Languages"
+		languageData = mapping.ParseRawLanguagesUnity(dir)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+
+		if headless {
+			updatesChan <- "Items mapping"
+		} else {
+			updatesChan <- "Items " + ui.HelpStyle("mapping")
+		}
+		mappedItems := mapping.MapItemsUnity(gameData, &languageData)
+		mappedItemPath := filepath.Join(dir, "MAPPED_ITEMS.json")
+		marshalSave(mappedItems, mappedItemPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Mounts mapping"
+		} else {
+			updatesChan <- "Mounts " + ui.HelpStyle("mapping")
+		}
+		mappedMounts := mapping.MapMountsUnity(gameData, &languageData)
+		mappedMountsPath := filepath.Join(dir, "MAPPED_MOUNTS.json")
+		marshalSave(mappedMounts, mappedMountsPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Almanax mapping"
+		} else {
+			updatesChan <- "Almanax " + ui.HelpStyle("mapping")
+		}
+		mappedAlmanax := mapping.MapAlmanaxUnity(gameData, &languageData)
+		mappedAlmanaxPath := filepath.Join(dir, "MAPPED_ALMANAX.json")
+		marshalSave(mappedAlmanax, mappedAlmanaxPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Sets mapping"
+		} else {
+			updatesChan <- "Sets " + ui.HelpStyle("mapping")
+		}
+		mappedSets := mapping.MapSetsUnity(gameData, &languageData)
+		mappedSetsPath := filepath.Join(dir, "MAPPED_SETS.json")
+		marshalSave(mappedSets, mappedSetsPath, indent)
+
+		if isChannelClosed(updatesChan) {
+			os.Exit(1)
+		}
+		if headless {
+			updatesChan <- "Recipes mapping"
+		} else {
+			updatesChan <- "Recipes " + ui.HelpStyle("mapping")
+		}
+		mappedRecipes := mapping.MapRecipesUnity(gameData)
+		mappedRecipesPath := filepath.Join(dir, "MAPPED_RECIPES.json")
+		marshalSave(mappedRecipes, mappedRecipesPath, indent)
 	} else {
-		updatesChan <- "Items " + ui.HelpStyle("mapping")
+		log.Fatal("Unsupported major version of raw data")
 	}
-	mappedItems := mapping.MapItems(gameData, &languageData)
-	mappedItemPath := filepath.Join(dir, "MAPPED_ITEMS.json")
-	marshalSave(mappedItems, mappedItemPath, indent)
-
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	if headless {
-		updatesChan <- "Mounts mapping"
-	} else {
-		updatesChan <- "Mounts " + ui.HelpStyle("mapping")
-	}
-	mappedMounts := mapping.MapMounts(gameData, &languageData)
-	mappedMountsPath := filepath.Join(dir, "MAPPED_MOUNTS.json")
-	marshalSave(mappedMounts, mappedMountsPath, indent)
-
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	if headless {
-		updatesChan <- "Almanax mapping"
-	} else {
-		updatesChan <- "Almanax " + ui.HelpStyle("mapping")
-	}
-	mappedAlmanax := mapping.MapAlmanax(gameData, &languageData)
-	mappedAlmanaxPath := filepath.Join(dir, "MAPPED_ALMANAX.json")
-	marshalSave(mappedAlmanax, mappedAlmanaxPath, indent)
-
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	updatesChan <- "Sets " + ui.HelpStyle("mapping")
-	mappedSets := mapping.MapSets(gameData, &languageData)
-	mappedSetsPath := filepath.Join(dir, "MAPPED_SETS.json")
-	marshalSave(mappedSets, mappedSetsPath, indent)
-
-	if isChannelClosed(updatesChan) {
-		os.Exit(1)
-	}
-	if headless {
-		updatesChan <- "Recipes mapping"
-	} else {
-		updatesChan <- "Recipes " + ui.HelpStyle("mapping")
-	}
-	mappedRecipes := mapping.MapRecipes(gameData)
-	mappedRecipesPath := filepath.Join(dir, "MAPPED_RECIPES.json")
-	marshalSave(mappedRecipes, mappedRecipesPath, indent)
 
 	if persistenceDir != "" {
 		if isChannelClosed(updatesChan) {
