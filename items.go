@@ -37,6 +37,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_evolutiveeffectsroot.asset.bundle", FriendlyName: "evol_effects.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_bonusescriterionsroot.asset.bundle", FriendlyName: "bonus_criterions.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_titlesroot.asset.bundle", FriendlyName: "titles.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_dungeonsroot.asset.bundle", FriendlyName: "dungeons.asset.bundle"},
 		}
 
 		err := PullImages([]string{"stelzo/doduda-umbu:latest"}, false, headless)
