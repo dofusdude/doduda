@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.5.0"
+	DodudaVersion     = "v0.5.1"
 	DodudaShort       = "doduda - Unofficial Ankama Launcher CLI"
 	DodudaLong        = "The Ankama Launcher Terminal Client for Developers."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
