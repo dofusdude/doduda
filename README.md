@@ -1,18 +1,15 @@
 <p align="center">
   <img src="https://docs.dofusdu.de/logo_cropped.png" width="120">
   <h3 align="center">doduda</h3>
-  <p align="center">The Ankama Launcher Terminal Client for Developers.</p>
+  <p align="center">The Open Ankama Launcher Terminal Client for Developers</p>
   <p align="center"><a href="https://goreportcard.com/report/github.com/dofusdude/doduda"><img src="https://goreportcard.com/badge/github.com/dofusdude/doduda" alt=""></a> <a href="https://github.com/dofusdude/doduda/actions/workflows/tests.yml"><img src="https://github.com/dofusdude/doduda/actions/workflows/tests.yml/badge.svg" alt=""></a>
   </p>
 </p>
 
-> [!NOTE]
-> Dofus 3 support is heavily under development. While the mapped data is not yet available, `doduda` already understands and exports Unity data. Try `doduda --release beta` or the [dofus3-beta](https://github.com/dofusdude/dofus3-beta) data repository.
-
-Download the latest Dofus 2 version from Ankama and convert the interesting parts to a developer friendly format.
+Download the latest Dofus 3 version from Ankama and convert the interesting parts to a developer friendly format.
 
 ```bash
-doduda && doduda map
+doduda --release beta && doduda map --release beta
 ```
 
 ## Features
