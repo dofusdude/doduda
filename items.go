@@ -40,14 +40,17 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_dungeonsroot.asset.bundle", FriendlyName: "dungeons.asset.bundle"},
 		}
 
-		err := PullImages([]string{"stelzo/doduda-umbu:latest"}, false, headless)
+		err := PullImages([]string{"stelzo/doduda-umbu:" + ARCH}, false, headless)
 		if err != nil {
 			return err
 		}
 
 		err = DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
-		return err
+		if err != nil {
+			return err
+		}
 
+		return nil
 	} else if version == 2 {
 		fileNames := []HashFile{
 			{Filename: "data/common/Items.d2o", FriendlyName: "items.d2o"},

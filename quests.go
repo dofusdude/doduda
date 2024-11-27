@@ -32,7 +32,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir str
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_almanaxcalendarsroot.asset.bundle", FriendlyName: "almanax.asset.bundle"},
 		}
 
-		err := PullImages([]string{"stelzo/doduda-umbu:latest"}, false, headless)
+		err := PullImages([]string{"stelzo/doduda-umbu:" + ARCH}, false, headless)
 		if err != nil {
 			return err
 		}

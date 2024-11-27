@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ var (
 	DodudaShort       = "doduda - Unofficial Ankama Launcher CLI"
 	DodudaLong        = "The Ankama Launcher Terminal Client for Developers."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
+	ARCH              string
 
 	rootCmd = &cobra.Command{
 		Use:           "doduda",
@@ -70,6 +72,16 @@ var (
 )
 
 func main() {
+	switch runtime.GOARCH {
+	case "arm64":
+		ARCH = "arm64"
+	case "amd64":
+		ARCH = "amd64"
+	default:
+		fmt.Printf("Error: Unsupported architecture %s\n", runtime.GOARCH)
+		os.Exit(1)
+	}
+
 	viper.SetDefault("LOG_LEVEL", "warn")
 	viper.AutomaticEnv()
 	parsedLevel, err := log.ParseLevel(viper.GetString("LOG_LEVEL"))

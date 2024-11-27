@@ -513,7 +513,7 @@ func UnpackUnityBundle(category string, inputPath string, outputPath string, mut
 
 	ctx := context.Background()
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "stelzo/doduda-umbu:latest",
+		Image: "stelzo/doduda-umbu:" + ARCH,
 		Cmd:   cmd,
 		Volumes: map[string]struct{}{
 			"/app/data": {},
@@ -585,7 +585,7 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 	}
 	defer cli.Close()
 
-	imageName := "stelzo/assetstudio-cli:latest"
+	imageName := "stelzo/assetstudio-cli:" + ARCH
 
 	ctx := context.Background()
 	bundles, err := os.ReadDir(inputDir)

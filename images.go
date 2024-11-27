@@ -133,6 +133,7 @@ func cleanImages(dir string, resolution int) error {
 func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int, dir string, headless bool) error {
 	inPath := filepath.Join(dir, "tmp")
 	outPath := filepath.Join(dir, "img", "item")
+	outPathMounts := filepath.Join(dir, "img", "mount")
 
 	if version == 2 {
 		fileNames := []HashFile{
@@ -170,15 +171,24 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 		fileNames := []HashFile{
 			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_assets_1x.bundle", FriendlyName: "item_images_1.imagebundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Items/item_assets_2x.bundle", FriendlyName: "item_images_2.imagebundle"},
-			//{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_.bundle", FriendlyName: "mount_images.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_assets_.bundle", FriendlyName: "mount_images.imagebundle"},
 		}
 
-		err := PullImages([]string{"stelzo/assetstudio-cli:latest"}, false, headless)
+		err := PullImages([]string{"stelzo/assetstudio-cli:" + ARCH}, false, headless)
 		if err != nil {
 			return err
 		}
 
-		err = DownloadUnpackFiles("Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
+		err = DownloadUnpackFiles("Item Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
+		if err != nil {
+			return err
+		}
+
+		fileNames = []HashFile{
+			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_assets_.bundle", FriendlyName: "mount_images.imagebundle"},
+		}
+
+		err = DownloadUnpackFiles("Mount Images", bin, hashJson, "picto", fileNames, dir, outPathMounts, true, "", headless, false)
 		if err != nil {
 			return err
 		}
@@ -199,6 +209,23 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 
 		feedbacks <- "cleaning"
 
+		// -- mounts cleaning --
+		err = os.Rename(filepath.Join(outPathMounts, "Assets", "BuiltAssets", "mounts", "small"), filepath.Join(outPathMounts, "small"))
+		if err != nil {
+			return err
+		}
+
+		err = os.Rename(filepath.Join(outPathMounts, "Assets", "BuiltAssets", "mounts", "big"), filepath.Join(outPathMounts, "big"))
+		if err != nil {
+			return err
+		}
+
+		err = os.RemoveAll(filepath.Join(outPathMounts, "Assets"))
+		if err != nil {
+			return err
+		}
+
+		// -- items cleaning --
 		err = os.Rename(filepath.Join(outPath, "Assets", "BuiltAssets", "items", "1x"), filepath.Join(outPath, "1x"))
 		if err != nil {
 			return err
@@ -215,6 +242,22 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 		}
 
 		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if cleanImages(filepath.Join(outPathMounts, "small"), 64) != nil {
+				log.Error("Error cleaning images", "err", err)
+			}
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if cleanImages(filepath.Join(outPathMounts, "big"), 256) != nil {
+				log.Error("Error cleaning images", "err", err)
+			}
+		}()
 
 		wg.Add(1)
 		go func() {
