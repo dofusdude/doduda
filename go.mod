@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/docker/docker v27.3.1+incompatible
 	github.com/dofusdude/ankabuffer v0.0.9
-	github.com/dofusdude/dodumap v0.5.2
+	github.com/dofusdude/dodumap v0.5.4
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/xhhuango/json v1.19.0

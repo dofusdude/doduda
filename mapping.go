@@ -71,8 +71,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		os.Exit(1)
 	}
 	updatesChan <- "Load persistence"
-	// TODO persistence strings probably changed?
-	err = mapping.LoadPersistedElements(persistenceDir, release)
+	err = mapping.LoadPersistedElements(persistenceDir, release, majorVersion)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -234,7 +233,11 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		updatesChan <- "Persist"
-		err := mapping.PersistElements(filepath.Join(persistenceDir, fmt.Sprintf("elements.%s.json", release)), filepath.Join(persistenceDir, fmt.Sprintf("item_types.%s.json", release)))
+		dofus3prefix := ""
+		if majorVersion == 3 {
+			dofus3prefix = ".dofus3"
+		}
+		err := mapping.PersistElements(filepath.Join(persistenceDir, fmt.Sprintf("elements%s.%s.json", dofus3prefix, release)), filepath.Join(persistenceDir, fmt.Sprintf("item_types%s.%s.json", dofus3prefix, release)))
 		if err != nil {
 			log.Fatal(err)
 		}
