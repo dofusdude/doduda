@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.5.3"
+	DodudaVersion     = "v0.5.4"
 	DodudaShort       = "doduda - Unofficial Ankama Launcher CLI"
 	DodudaLong        = "The Ankama Launcher Terminal Client for Developers."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
@@ -97,7 +97,7 @@ func main() {
 	rootCmd.Flags().Int32("bin", 500, "Divide the files into smaller bins of the given size in Megabyte to reduce overall memory usage. Disable binning with -1.")
 	rootCmd.PersistentFlags().StringP("platform", "p", "windows", "For which platform to download the game. Available: 'windows', 'macos', 'linux'.")
 	rootCmd.PersistentFlags().Bool("headless", false, "Run without a TUI.")
-	rootCmd.PersistentFlags().StringP("release", "r", "main", "Which Game release version type to use. Available: 'main', 'beta'.")
+	rootCmd.PersistentFlags().StringP("release", "r", "dofus3", "Which Game release version type to use. Available: 'main', 'beta', 'dofus3'.")
 	rootCmd.PersistentFlags().StringP("output", "o", "./data", "Working folder for output or input.")
 	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
 	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
@@ -211,12 +211,10 @@ func versionCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	if gameRelease != "main" && gameRelease != "beta" {
+	if gameRelease != "main" && gameRelease != "beta" && gameRelease != "dofus3" {
 		fmt.Println("Invalid release type")
 		os.Exit(1)
 	}
-
-	beta := gameRelease == "beta"
 
 	headless, err := ccmd.Flags().GetBool("headless")
 	if err != nil {
@@ -239,7 +237,7 @@ func versionCommand(ccmd *cobra.Command, args []string) {
 	}
 
 	cytrusPrefix := "6.0_"
-	version := GetLatestLauncherVersion(beta)
+	version := GetLatestLauncherVersion(gameRelease)
 	if !strings.HasPrefix(version, cytrusPrefix) {
 		version = fmt.Sprintf("%s%s", cytrusPrefix, version)
 	}
@@ -461,14 +459,13 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	isBeta := gameRelease == "beta"
 	var indentation string
 	if indent {
 		indentation = "  "
 	} else {
 		indentation = ""
 	}
-	err = Download(isBeta, version, dir, clean, fullGame, platform, int(bin), manifest, workers, ignore, indentation, headless)
+	err = Download(gameRelease, version, dir, clean, fullGame, platform, int(bin), manifest, workers, ignore, indentation, headless)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

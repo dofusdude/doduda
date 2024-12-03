@@ -13,8 +13,9 @@ import (
 )
 
 type VersionFile struct {
-	Main string `json:"main"`
-	Beta string `json:"beta"`
+	Main   string `json:"main"`
+	Dofus3 string `json:"dofus3"`
+	Beta   string `json:"beta"`
 }
 
 func VersionChanged(dir string, gameVersion string, versionFilePath string, customBodyPath string, volatile bool, initialHook *bool) (bool, string, string, error) { // changed?, old version, new version, error
@@ -46,15 +47,17 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 		versionFile.Main = "-"
 	}
 
-	isBeta := gameVersion == "beta"
-	serverVersion := GetLatestLauncherVersion(isBeta)
+	serverVersion := GetLatestLauncherVersion(gameVersion)
 	serverVersion = serverVersion[4:] // removing updater version
 
 	var versionChanged bool
-	if isBeta {
-		versionChanged = versionFile.Beta != serverVersion
-	} else {
+	switch gameVersion {
+	case "main":
 		versionChanged = versionFile.Main != serverVersion
+	case "dofus3":
+		versionChanged = versionFile.Dofus3 != serverVersion
+	case "beta":
+		versionChanged = versionFile.Beta != serverVersion
 	}
 
 	if *initialHook {
@@ -64,12 +67,17 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 
 	if versionChanged {
 		var oldVersion string
-		if isBeta {
-			oldVersion = versionFile.Beta
-			versionFile.Beta = serverVersion
-		} else {
+
+		switch gameVersion {
+		case "main":
 			oldVersion = versionFile.Main
 			versionFile.Main = serverVersion
+		case "dofus3":
+			oldVersion = versionFile.Dofus3
+			versionFile.Dofus3 = serverVersion
+		case "beta":
+			oldVersion = versionFile.Beta
+			versionFile.Beta = serverVersion
 		}
 
 		if !volatile {

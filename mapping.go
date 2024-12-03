@@ -237,7 +237,12 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		if majorVersion == 3 {
 			dofus3prefix = ".dofus3"
 		}
-		err := mapping.PersistElements(filepath.Join(persistenceDir, fmt.Sprintf("elements%s.%s.json", dofus3prefix, release)), filepath.Join(persistenceDir, fmt.Sprintf("item_types%s.%s.json", dofus3prefix, release)))
+
+		releasePersist := release
+		if releasePersist == "dofus3" {
+			releasePersist = "main"
+		}
+		err := mapping.PersistElements(filepath.Join(persistenceDir, fmt.Sprintf("elements%s.%s.json", dofus3prefix, releasePersist)), filepath.Join(persistenceDir, fmt.Sprintf("item_types%s.%s.json", dofus3prefix, releasePersist)))
 		if err != nil {
 			log.Fatal(err)
 		}

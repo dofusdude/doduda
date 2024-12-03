@@ -38,6 +38,10 @@ func DownloadLanguageFiles(release string, hashJson *ankabuffer.Manifest, bin in
 
 		feedbacks <- "searching"
 
+		if release == "dofus3" {
+			release = "main"
+		}
+
 		ghUrl := fmt.Sprintf("https://api.github.com/repos/dofusdude/dofus3-lang-%s/releases/latest", release)
 		releaseApiResponse, err := http.Get(ghUrl)
 		if err != nil {

@@ -131,7 +131,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 	feedbackWg.Wait()
 }
 
-func GetLatestLauncherVersion(beta bool) string {
+func GetLatestLauncherVersion(release string) string {
 	versionResponse, err := http.Get("https://cytrus.cdn.ankama.com/cytrus.json")
 	if err != nil {
 		log.Fatal(err)
@@ -153,11 +153,7 @@ func GetLatestLauncherVersion(beta bool) string {
 	platform := dofus["platforms"].(map[string]interface{})
 	windows := platform["windows"].(map[string]interface{})
 
-	if beta {
-		return windows["beta"].(string)
-	} else {
-		return windows["main"].(string)
-	}
+	return windows[release].(string)
 }
 
 func touchFileIfNotExists(fileName string) error {
@@ -201,13 +197,7 @@ func CreateDataDirectoryStructure(dir string) {
 	}
 }
 
-func GetReleaseManifest(version string, beta bool, platform string, dir string) ([]byte, error) {
-	var gameVersionType string
-	if beta {
-		gameVersionType = "beta"
-	} else {
-		gameVersionType = "main"
-	}
+func GetReleaseManifest(version string, gameVersionType string, platform string, dir string) ([]byte, error) {
 	gameHashesUrl := fmt.Sprintf("https://cytrus.cdn.ankama.com/dofus/releases/%s/%s/%s.manifest", gameVersionType, platform, version)
 	hashResponse, err := http.Get(gameHashesUrl)
 	if err != nil {
@@ -265,7 +255,7 @@ func humanFileSize(bytes float64, decimal bool, precision int) string {
 	return fmt.Sprintf("%.*f %s", precision, bytes, units[u])
 }
 
-func Download(beta bool, version string, dir string, clean bool, fullGame bool, platform string, bin int, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
+func Download(releaseChannel string, version string, dir string, clean bool, fullGame bool, platform string, bin int, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
 	var ankaManifest ankabuffer.Manifest
 	manifestSearchPath := "manifest.json"
 
@@ -308,7 +298,7 @@ func Download(beta bool, version string, dir string, clean bool, fullGame bool, 
 	if manifestPath == "" || clean {
 		cytrusPrefix := "6.0_"
 		if version == "latest" {
-			version = GetLatestLauncherVersion(beta)
+			version = GetLatestLauncherVersion(releaseChannel)
 		} else {
 			// ATT: prefix changes with cytrus updates
 			if !strings.HasPrefix(version, cytrusPrefix) {
@@ -318,7 +308,7 @@ func Download(beta bool, version string, dir string, clean bool, fullGame bool, 
 
 		dofusVersion = strings.TrimPrefix(version, cytrusPrefix)
 
-		rawManifest, err := GetReleaseManifest(version, beta, platform, dir)
+		rawManifest, err := GetReleaseManifest(version, releaseChannel, platform, dir)
 		if err != nil {
 			return err
 		}
@@ -358,7 +348,7 @@ func Download(beta bool, version string, dir string, clean bool, fullGame bool, 
 	}
 
 	betaSuffix := ""
-	if beta {
+	if strings.Contains(releaseChannel, "beta") {
 		betaSuffix = " [beta]"
 	}
 	feedbacks <- dofusVersion + betaSuffix
@@ -416,14 +406,7 @@ func Download(beta bool, version string, dir string, clean bool, fullGame bool, 
 		CreateDataDirectoryStructure(dir)
 
 		if !contains(ignore, "languages") {
-			var releaseVersion string
-			if beta {
-				releaseVersion = "beta"
-			} else {
-				releaseVersion = "main"
-			}
-
-			if err := DownloadLanguages(releaseVersion, &ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+			if err := DownloadLanguages(releaseChannel, &ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
