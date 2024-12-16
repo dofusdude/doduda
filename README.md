@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://docs.dofusdu.de/logo_cropped.png" width="120">
+  <img src="https://docs.dofusdu.de/dofus2/logo_cropped.png" width="120">
   <h3 align="center">doduda</h3>
   <p align="center">The Open Ankama Launcher Terminal Client for Developers</p>
   <p align="center"><a href="https://goreportcard.com/report/github.com/dofusdude/doduda"><img src="https://goreportcard.com/badge/github.com/dofusdude/doduda" alt=""></a> <a href="https://github.com/dofusdude/doduda/actions/workflows/tests.yml"><img src="https://github.com/dofusdude/doduda/actions/workflows/tests.yml/badge.svg" alt=""></a>
