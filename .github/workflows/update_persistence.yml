@@ -19,6 +19,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.21"
+      - name: Prefetch docker images
+        run: |
+          docker pull stelzo/doduda-umbu:amd64
+          docker pull stelzo/assetstudio-cli:amd64
       - name: Build
         run: go build -v .
       - name: Run and Update
