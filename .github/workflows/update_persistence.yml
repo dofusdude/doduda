@@ -44,7 +44,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
-          if [ "${{ github.event.inputs.release }}" == "dofus3" ]; then
+          if [[ "${{ github.event.inputs.release }}" == "dofus3" || "${{ github.event.inputs.release }}" == "main" ]]; then
             REPO="dofusdude/dofus3-main"
           else
             REPO="dofusdude/dofus3-beta"
