@@ -43,4 +43,10 @@ jobs:
         if: startsWith(github.event.inputs.version, '3')
         env:
           GH_TOKEN: ${{ secrets.PAT }}
-        run: gh workflow run release --repo dofusdude/dofus3-${{ github.event.inputs.release }} -f version=${{ github.event.inputs.version }}
+        run: |
+          if [ "${{ github.event.inputs.release }}" == "dofus3" ]; then
+            REPO="dofusdude/dofus3-main"
+          else
+            REPO="dofusdude/dofus3-beta"
+          fi
+          gh workflow run release --repo $REPO -f version=${{ github.event.inputs.version }}
