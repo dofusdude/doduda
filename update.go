@@ -569,11 +569,8 @@ func UnpackUnityI18n(category string, inputPath string, outputPath string, muteS
 	}
 	defer cli.Close()
 
-	outputTrimmed := strings.TrimSuffix(outputPath, ".json")
-	outputFileName := outputTrimmed + ".i18n.json"
-
 	inputRawFileName := filepath.Base(inputPath)
-	outputRawFileName := filepath.Base(outputFileName)
+	outputRawFileName := filepath.Base(outputPath)
 
 	inputDir := filepath.Dir(inputPath)
 
