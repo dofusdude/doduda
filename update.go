@@ -314,9 +314,13 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 		}
 
 		feedbacks <- "parsing"
-		ankaManifest = *ankabuffer.ParseManifest(rawManifest, dofusVersion)
+		ankaManifestPtr, err := ankabuffer.ParseManifest(rawManifest, dofusVersion)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ankaManifest = *ankaManifestPtr
 
-		marshalledBytes, err := json.Marshal(ankaManifest)
+		marshalledBytes, err := json.Marshal(ankaManifestPtr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -405,8 +409,21 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 	} else {
 		CreateDataDirectoryStructure(dir)
 
+		if rawDofusMajorVersion == 3 {
+			err := PullImages([]string{"stelzo/doduda-umbu:" + ARCH, "stelzo/assetstudio-cli:" + ARCH}, false, headless)
+			if err != nil {
+				return err
+			}
+		}
+
+		// parallel if headless true
+		/*worker := 1
+		if headless {
+			worker = 4
+			}*/
+
 		if !contains(ignore, "languages") {
-			if err := DownloadLanguages(releaseChannel, &ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+			if err := DownloadLanguages(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -419,6 +436,12 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 
 		if !contains(ignore, "quests") {
 			if err := DownloadQuests(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if !contains(ignore, "achievements") {
+			if err := DownloadAchievements(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -527,6 +550,68 @@ func UnpackUnityBundle(category string, inputPath string, outputPath string, mut
 	return nil
 }
 
+func UnpackUnityI18n(category string, inputPath string, outputPath string, muteSpinner bool, headless bool) error {
+	if !strings.HasSuffix(inputPath, ".bin") {
+		return fmt.Errorf("invalid suffix")
+	}
+
+	if !strings.HasSuffix(outputPath, ".json") {
+		return fmt.Errorf("can only output to json")
+	}
+
+	if _, err := os.Stat(inputPath); os.IsNotExist(err) {
+		return fmt.Errorf("file %s does not exist", inputPath)
+	}
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	outputTrimmed := strings.TrimSuffix(outputPath, ".json")
+	outputFileName := outputTrimmed + ".i18n.json"
+
+	inputRawFileName := filepath.Base(inputPath)
+	outputRawFileName := filepath.Base(outputFileName)
+
+	inputDir := filepath.Dir(inputPath)
+
+	cmd := []string{"dotnet", "out/unity-bundle-unwrap.dll", path.Join("/app", "data", inputRawFileName), path.Join("/app", "data", outputRawFileName)}
+
+	ctx := context.Background()
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image: "stelzo/doduda-umbu:" + ARCH,
+		Cmd:   cmd,
+		Volumes: map[string]struct{}{
+			"/app/data": {},
+		},
+	}, &container.HostConfig{
+		Binds: []string{
+			fmt.Sprintf("%s:/app/data", inputDir),
+		},
+		AutoRemove: true,
+	}, nil, nil, "")
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return err
+	}
+
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
+	case <-statusCh:
+	}
+
+	return nil
+}
+
 func PullImages(images []string, muteSpinner bool, headless bool) error {
 	feedbacks := make(chan string)
 
@@ -552,7 +637,12 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 		if err != nil {
 			return err
 		}
-		imageHandle.Close()
+		defer imageHandle.Close()
+
+		_, err = io.ReadAll(imageHandle)
+		if err != nil {
+			log.Fatalf("Error finishing image handler: %v", err)
+		}
 	}
 
 	close(feedbacks)
@@ -734,32 +824,7 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 	}
 
 	if suffix == "bin" {
-		rawData, err := os.ReadFile(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		langWithExt := filepath.Base(file)
-		langWithoutExt := strings.TrimSuffix(langWithExt, filepath.Ext(langWithExt))
-
-		entities, err := unpack.LanguageExtractStrings(rawData)
-		data := map[string]interface{}{
-			"language": langWithoutExt,
-			"texts":    entities,
-		}
-
-		var marshalledBytes []byte
-		if indent != "" {
-			marshalledBytes, err = jsnan.MarshalIndent(data, "", indent)
-		} else {
-			marshalledBytes, err = jsnan.Marshal(data)
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
-
-		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
+		err := UnpackUnityI18n(category, file, absOutPath, muteSpinner, headless)
 		if err != nil {
 			log.Fatal(err)
 		}

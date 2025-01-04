@@ -16,12 +16,16 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/dofusdude/doduda/ui"
 )
 
 func Render(inputDir string, outputDir string, incrementalParts []string, resolution int, headless bool) error {
+	err := PullImages([]string{"stelzo/swf-to-svg", "stelzo/svg-to-png"}, false, headless)
+	if err != nil {
+		return err
+	}
+
 	updateChan := make(chan string)
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -43,19 +47,6 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 		os.Exit(1)
 	}
 	updateChan <- "Pulling image"
-
-	ctx := context.Background()
-	swfToSvg, err := cli.ImagePull(ctx, "stelzo/swf-to-svg", image.PullOptions{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	swfToSvg.Close()
-
-	svgToPng, err := cli.ImagePull(ctx, "stelzo/svg-to-png", image.PullOptions{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	svgToPng.Close()
 
 	swfFiles, err := os.ReadDir(inputDir)
 	if err != nil {
@@ -157,6 +148,7 @@ func Render(inputDir string, outputDir string, incrementalParts []string, resolu
 			filepath.Join("data", svgFileName),
 		}
 
+		ctx := context.Background()
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image: "stelzo/swf-to-svg",
 			Cmd:   cmd,

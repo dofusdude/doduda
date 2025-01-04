@@ -174,12 +174,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 			{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_assets_.bundle", FriendlyName: "mount_images.imagebundle"},
 		}
 
-		err := PullImages([]string{"stelzo/assetstudio-cli:" + ARCH}, false, headless)
-		if err != nil {
-			return err
-		}
-
-		err = DownloadUnpackFiles("Item Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
+		err := DownloadUnpackFiles("Item Images", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false)
 		if err != nil {
 			return err
 		}

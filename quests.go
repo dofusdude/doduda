@@ -32,12 +32,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir str
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_almanaxcalendarsroot.asset.bundle", FriendlyName: "almanax.asset.bundle"},
 		}
 
-		err := PullImages([]string{"stelzo/doduda-umbu:" + ARCH}, false, headless)
-		if err != nil {
-			return err
-		}
-
-		err = DownloadUnpackFiles("Quests", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Quests", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))

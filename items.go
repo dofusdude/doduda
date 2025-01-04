@@ -40,12 +40,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_dungeonsroot.asset.bundle", FriendlyName: "dungeons.asset.bundle"},
 		}
 
-		err := PullImages([]string{"stelzo/doduda-umbu:" + ARCH}, false, headless)
-		if err != nil {
-			return err
-		}
-
-		err = DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
 		if err != nil {
 			return err
 		}
