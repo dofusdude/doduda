@@ -9,7 +9,7 @@
 Download the latest Dofus 3 version from Ankama and convert the interesting parts to a developer friendly format.
 
 ```bash
-doduda --release beta && doduda map --release beta
+doduda && doduda map
 ```
 
 ## Features
@@ -18,11 +18,12 @@ See `doduda --help` for all parameters.
 
 ### Load
 
-Download the latest Dofus version.
+Download the latest Dofus version. You can change the target folder with `--output`.
 
 <img src="https://vhs.charm.sh/vhs-15sHEeT47mgiZ7vrgnenB2.gif" alt="load example" width="600">
 
-The results are saved to `./data`.
+You can also download the complete game to get a playable version without unpacking the files using `doduda --full`.
+If you want a different platform version than Windows, you can specify the it with the `--platform` parameter.
 
 ### Map
 
@@ -46,13 +47,20 @@ You can use that for getting anything that supports webhooks to react to Dofus v
 ### Render
 
 Generate pre-rendered, high resolution `.png` images from the vector files.
-This requires [Docker](https://docs.docker.com/engine/install/) to be installed and running.
 
 <img src="https://vhs.charm.sh/vhs-H3yfHga5lcnzj9UhLyP5C.gif" alt="render example" width="600">
 
 ## Installation
 
-`doduda` is a single binary that you can download and run without dependencies. There are precompiled versions for Linux, macOS and Windows.
+`doduda` is a single binary that you can download and run. There are precompiled versions for Linux, macOS and Windows.
+
+There is only one (optional) dependency: [Docker](https://docs.docker.com/get-docker/).
+
+You need to have it installed when you:
+- want to unpack the Dofus 3 data files (e.g. every root `doduda` call)
+- want to use the `render` command to generate images for Dofus 2.
+
+If you have problems with Docker, like a missing socket, the solution is often to your `docker.sock` path and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>` before running `doduda`.
 
 ### Precompiled binaries (recommended)
 
@@ -85,8 +93,6 @@ This tool is the first step in a pipeline that updates the data on [GitHub](http
 ## Known Problems
 
 - Run `doduda` with `--headless` in a server environment or automations to avoid "no tty" errors.
-
-- If you get an error regarding a missing Docker socket when running `doduda render`, find out where your `docker.sock` is and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>`.
 
 ## Credit
 
