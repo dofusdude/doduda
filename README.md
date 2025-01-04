@@ -57,8 +57,10 @@ Generate pre-rendered, high resolution `.png` images from the vector files.
 There is only one (optional) dependency: [Docker](https://docs.docker.com/get-docker/).
 
 You need to have it installed when you:
-- want to unpack the Dofus 3 data files (e.g. every root `doduda` call)
+- want to unpack the Dofus 3 data files.
 - want to use the `render` command to generate images for Dofus 2.
+
+You don't need it when you only want to use the `map` command or download the entire game (`--full`).
 
 If you have problems with Docker, like a missing socket, the solution is often to your `docker.sock` path and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>` before running `doduda`.
 
