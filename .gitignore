@@ -4,3 +4,4 @@ doduda
 version/
 .version.json
 dist/
+.DS_Store
