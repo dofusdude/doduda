@@ -38,6 +38,9 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_bonusescriterionsroot.asset.bundle", FriendlyName: "bonus_criterions.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_titlesroot.asset.bundle", FriendlyName: "titles.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_dungeonsroot.asset.bundle", FriendlyName: "dungeons.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellpairsroot.asset.bundle", FriendlyName: "spell_pairs.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellstatesroot.asset.bundle", FriendlyName: "spell_states.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellvariantsroot.asset.bundle", FriendlyName: "spell_variants.asset.bundle"},
 		}
 
 		err := DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
