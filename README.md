@@ -1,14 +1,18 @@
 <p align="center">
   <img src="https://docs.dofusdu.de/dofus2/logo_cropped.png" width="120">
   <h3 align="center">doduda</h3>
-  <p align="center">The Open Ankama Launcher Terminal Client for Developers</p>
+  <p align="center">CLI for Dofus asset downloading and unpacking</p>
   <p align="center"><a href="https://goreportcard.com/report/github.com/dofusdude/doduda"><img src="https://goreportcard.com/badge/github.com/dofusdude/doduda" alt=""></a> <a href="https://github.com/dofusdude/doduda/actions/workflows/tests.yml"><img src="https://github.com/dofusdude/doduda/actions/workflows/tests.yml/badge.svg" alt=""></a>
   </p>
 </p>
 
-Download the latest Dofus 3 version from Ankama and convert the interesting parts to a developer friendly format.
+Download the latest Dofus 3 data from Ankama and convert the interesting parts to a developer friendly json format:
 
-```bash
+```sh
+# Install
+curl -s https://get.dofusdu.de/doduda | sh
+
+# Run
 doduda && doduda map
 ```
 
@@ -52,19 +56,22 @@ Generate pre-rendered, high resolution `.png` images from the vector files.
 
 ## Installation
 
-`doduda` is a single binary that you can download and run. There are precompiled versions for Linux, macOS and Windows.
+```sh
+curl -s https://get.dofusdu.de/doduda | sh
+```
 
-There is only one (optional) dependency: [Docker](https://docs.docker.com/get-docker/).
+There is only one dependency: [Docker](https://docs.docker.com/get-docker/).
 
 You need to have it installed when you:
+
 - want to unpack the Dofus 3 data files.
 - want to use the `render` command to generate images for Dofus 2.
 
-You don't need it when you only want to use the `map` command or download the entire game (`--full`).
+You don't need it when you only want to use the `map` command or download the entire game (`--full`). The script above will crash if Docker is not installed since Dofus 3 is the default game at the moment.
 
-If you have problems with Docker, like a missing socket, the solution is often to your `docker.sock` path and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>` before running `doduda`.
+If you have problems with Docker, like a missing socket, the solution is often to find your `docker.sock` path and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>` before running `doduda`.
 
-### Precompiled binaries (recommended)
+### GitHub Releases
 
 Get the latest `doduda` binary from the [release](https://github.com/dofusdude/doduda/releases) page.
 
@@ -76,17 +83,9 @@ You need to have `$GOPATH/bin` in your `$PATH` for this to work, so `export PATH
 go install github.com/dofusdude/doduda@latest
 ```
 
-### Build from source (needs [Go](https://go.dev/doc/install) >= 1.21)
-
-```bash
-git clone https://github.com/dofusdude/doduda
-cd doduda
-go build
-```
-
 ## The dofusdude auto-update cycle
 
-This tool is the first step in a pipeline that updates the data on [GitHub](https://github.com/dofusdude/dofus2-main) when a new Dofus version is released.
+This tool is the first step in a pipeline that updates the data on [GitHub](https://github.com/dofusdude/dofus3-main) when a new Dofus version is released.
 
 1. Two watchdogs (`doduda listen`) listen for new Dofus versions. One for main and one for beta. When something releases, the watchdog calls the GitHub API to start a workflow that uses `doduda` to download and parse the update to check for new elements and item_types. They hold global IDs for the API, so they must be consistent with each update.
 2. At the end of the `doduda` workflow, it triggers the corresponding data repository to do a release, which then downloads the latest `doduda` binary (because it is a different workflow) and runs it to produce the final dataset. The data repository opens a release and uploads the files.
@@ -98,7 +97,7 @@ This tool is the first step in a pipeline that updates the data on [GitHub](http
 
 ## Credit
 
-The code in the `unpack` directory is a port of the [PyDofus](https://github.com/balciseri/PyDofus) project to Go. Thanks to balciseri for the work on PyDofus!
+To unpack Dofus 2 data, doduda ships a port of the [PyDofus](https://github.com/balciseri/PyDofus) project. Thanks to balciseri for the work on PyDofus!
 
 The terminal visualizations are made with [vhs](https://vhs.charm.sh).
 
