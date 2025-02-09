@@ -99,7 +99,7 @@ func main() {
 	rootCmd.PersistentFlags().StringP("release", "r", "dofus3", "Which Game release version type to use. Available: 'main', 'beta', 'dofus3'.")
 	rootCmd.PersistentFlags().StringP("output", "o", "./data", "Working folder for output or input.")
 	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
-	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
+	rootCmd.PersistentFlags().IntP("jobs", "j", 4, "Number of workers to use when things can run in parallel. High numbers on small machines can cause issues with RAM or Docker.")
 	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, `Exclude categories of content from download and unpacking. Below are the categories available for both Dofus 2 and Dofus 3.
 
 Join them with a '-'. Example: --i images-items --i data-language.
@@ -491,7 +491,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 
 	dir = parseWd(dir)
 
-	workers, err := ccmd.Flags().GetInt("mount-image-workers")
+	workers, err := ccmd.Flags().GetInt("jobs")
 	if err != nil {
 		log.Fatal(err)
 	}

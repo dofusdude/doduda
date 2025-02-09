@@ -286,7 +286,7 @@ func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bi
 	feedbacks <- "✅ " + topic
 }
 
-func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int, dir string, ignore []string, headless bool) error {
+func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurrentDownloads int, version int, dir string, ignore []string, headless bool) error {
 	if version == 2 {
 		fileNames := []HashFile{
 			{Filename: "content/gfx/items/bitmap0.d2p", FriendlyName: "bitmaps_0.d2p"},
@@ -542,7 +542,6 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, version int,
 			}
 		}
 
-		const maxConcurrentDownloads = 3
 		const totalDownloads = 14 // just to buffer, must be at least the number of go routines started below
 
 		feedbacks := make(chan string)

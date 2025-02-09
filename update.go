@@ -259,7 +259,7 @@ func humanFileSize(bytes float64, decimal bool, precision int) string {
 	return fmt.Sprintf("%.*f %s", precision, bytes, units[u])
 }
 
-func Download(releaseChannel string, version string, dir string, clean bool, fullGame bool, platform string, bin int, manifest string, mountsWorker int, ignore []string, indent string, headless bool) error {
+func Download(releaseChannel string, version string, dir string, clean bool, fullGame bool, platform string, bin int, manifest string, jobs int, ignore []string, indent string, headless bool) error {
 	var ankaManifest ankabuffer.Manifest
 	manifestSearchPath := "manifest.json"
 
@@ -450,7 +450,7 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 			}
 		}
 
-		if err := DownloadImagesLauncher(&ankaManifest, bin, rawDofusMajorVersion, dir, ignore, headless); err != nil {
+		if err := DownloadImagesLauncher(&ankaManifest, bin, jobs, rawDofusMajorVersion, dir, ignore, headless); err != nil {
 			log.Fatal(err)
 		}
 
@@ -458,9 +458,9 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 		if rawDofusMajorVersion == 2 && !ignoresRegex(ignore, "images-mounts") && !ignoresRegex(ignore, "data-items") {
 			gamedata := mapping.ParseRawData(dir)
 			if !headless {
-				mountsWorker = 1
+				jobs = 1
 			}
-			DownloadMountsImages(gamedata, bin, &ankaManifest, mountsWorker, dir, headless)
+			DownloadMountsImages(gamedata, bin, &ankaManifest, jobs, dir, headless)
 		}
 
 		os.RemoveAll(fmt.Sprintf("%s/tmp", dir))
