@@ -9,7 +9,7 @@ Set FontFamily "Fira Code"
 Set TypingSpeed 0.05
 
 Type "doduda \" Sleep 100ms Enter
-Type "  --ignore mountsimages \" Sleep 100ms Enter
+Type "  --ignore images-mounts \" Sleep 100ms Enter
 Type "  --ignore languages" Sleep 1000ms Enter
 
 Sleep 25

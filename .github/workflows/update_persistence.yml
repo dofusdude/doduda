@@ -27,7 +27,7 @@ jobs:
         run: go build -v .
       - name: Run and Update
         run: |
-          ./doduda --headless --ignore mountsimages --ignore itemsimages --release ${{ github.event.inputs.release }}
+          ./doduda --headless --ignore 'images-*' --release ${{ github.event.inputs.release }}
           ./doduda map --headless --persistence-dir persistent --release ${{ github.event.inputs.release }}
           git config --global user.name 'stelzo'
           git config --global user.email 'stelzo@users.noreply.github.com'

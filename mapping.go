@@ -70,7 +70,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	if isChannelClosed(updatesChan) {
 		os.Exit(1)
 	}
-	updatesChan <- "Load persistence"
+	updatesChan <- "⬇️ Persistence"
 	err = mapping.LoadPersistedElements(persistenceDir, release, majorVersion)
 	if err != nil {
 		log.Fatal(err)
@@ -97,7 +97,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Items mapping"
+			updatesChan <- "Items 🧠"
 		} else {
 			updatesChan <- "Items " + ui.HelpStyle("mapping")
 		}
@@ -109,7 +109,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Mounts mapping"
+			updatesChan <- "Mounts 🧠"
 		} else {
 			updatesChan <- "Mounts " + ui.HelpStyle("mapping")
 		}
@@ -121,7 +121,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Almanax mapping"
+			updatesChan <- "Almanax 🧠"
 		} else {
 			updatesChan <- "Almanax " + ui.HelpStyle("mapping")
 		}
@@ -133,7 +133,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Sets mapping"
+			updatesChan <- "Sets 🧠"
 		} else {
 			updatesChan <- "Sets " + ui.HelpStyle("mapping")
 		}
@@ -145,7 +145,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Recipes mapping"
+			updatesChan <- "Recipes 🧠"
 		} else {
 			updatesChan <- "Recipes " + ui.HelpStyle("mapping")
 		}
@@ -169,7 +169,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		}
 
 		if headless {
-			updatesChan <- "Items mapping"
+			updatesChan <- "Items 🧠"
 		} else {
 			updatesChan <- "Items " + ui.HelpStyle("mapping")
 		}
@@ -181,7 +181,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Mounts mapping"
+			updatesChan <- "Mounts 🧠"
 		} else {
 			updatesChan <- "Mounts " + ui.HelpStyle("mapping")
 		}
@@ -193,7 +193,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Almanax mapping"
+			updatesChan <- "Almanax 🧠"
 		} else {
 			updatesChan <- "Almanax " + ui.HelpStyle("mapping")
 		}
@@ -205,7 +205,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Sets mapping"
+			updatesChan <- "Sets 🧠"
 		} else {
 			updatesChan <- "Sets " + ui.HelpStyle("mapping")
 		}
@@ -217,7 +217,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Recipes mapping"
+			updatesChan <- "Recipes 🧠"
 		} else {
 			updatesChan <- "Recipes " + ui.HelpStyle("mapping")
 		}
@@ -232,7 +232,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		if isChannelClosed(updatesChan) {
 			os.Exit(1)
 		}
-		updatesChan <- "Persist"
+		updatesChan <- "💾"
 		dofus3prefix := ""
 		if majorVersion == 3 {
 			dofus3prefix = ".dofus3"

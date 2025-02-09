@@ -5,3 +5,4 @@ version/
 .version.json
 dist/
 .DS_Store
+*.json

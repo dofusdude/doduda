@@ -11,10 +11,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/dlclark/regexp2"
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/docker/api/types/container"
@@ -182,19 +185,6 @@ func CreateDataDirectoryStructure(dir string) {
 	os.MkdirAll(fmt.Sprintf("%s/vector/mount", dir), os.ModePerm)
 
 	os.MkdirAll(fmt.Sprintf("%s/languages", dir), os.ModePerm)
-
-	err := touchFileIfNotExists(fmt.Sprintf("%s/img/index.html", dir))
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = touchFileIfNotExists(fmt.Sprintf("%s/img/item/index.html", dir))
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = touchFileIfNotExists(fmt.Sprintf("%s/img/mount/index.html", dir))
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func GetReleaseManifest(version string, gameVersionType string, platform string, dir string) ([]byte, error) {
@@ -214,7 +204,21 @@ func GetReleaseManifest(version string, gameVersionType string, platform string,
 	return hashBody, nil
 }
 
+func ignoresRegex(ignores []string, filename string) bool {
+	for _, ignore := range ignores {
+		compiled := regexp2.MustCompile(ignore, regexp2.None)
+		match, _ := compiled.MatchString(filename)
+		if match {
+			return true
+		}
+	}
+	return false
+}
+
 func contains(arr []string, str string) bool {
+	if arr == nil {
+		return false
+	}
 	for _, s := range arr {
 		if s == str {
 			return true
@@ -270,7 +274,7 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 	if isChannelClosed(feedbacks) {
 		os.Exit(1)
 	}
-	feedbacks <- "loading"
+	feedbacks <- "⬇️"
 
 	var manifestPath string
 	if manifest == "" {
@@ -422,38 +426,36 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 			worker = 4
 			}*/
 
-		if !contains(ignore, "languages") {
+		if !ignoresRegex(ignore, "data-languages") {
 			if err := DownloadLanguages(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		if !contains(ignore, "items") {
+		if !ignoresRegex(ignore, "data-items") {
 			if err := DownloadItems(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		if !contains(ignore, "quests") {
+		if !ignoresRegex(ignore, "data-quests") {
 			if err := DownloadQuests(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		if !contains(ignore, "achievements") {
+		if !ignoresRegex(ignore, "data-achievements") {
 			if err := DownloadAchievements(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		if !contains(ignore, "itemsimages") {
-			if err := DownloadImagesLauncher(&ankaManifest, bin, rawDofusMajorVersion, dir, headless); err != nil {
-				log.Fatal(err)
-			}
+		if err := DownloadImagesLauncher(&ankaManifest, bin, rawDofusMajorVersion, dir, ignore, headless); err != nil {
+			log.Fatal(err)
 		}
 
 		// mountsimages rendering only needed for Dofus 2.x
-		if rawDofusMajorVersion == 2 && !contains(ignore, "mountsimages") && !contains(ignore, "items") {
+		if rawDofusMajorVersion == 2 && !ignoresRegex(ignore, "images-mounts") && !ignoresRegex(ignore, "data-items") {
 			gamedata := mapping.ParseRawData(dir)
 			if !headless {
 				mountsWorker = 1
@@ -629,7 +631,7 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 
 	for _, imageRef := range images {
 		ctx := context.Background()
-		feedbacks <- "Pulling " + imageRef
+		feedbacks <- "⬇️ " + imageRef
 		imageHandle, err := cli.ImagePull(ctx, imageRef, image.PullOptions{})
 		if err != nil {
 			return err
@@ -882,10 +884,23 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 	var filesToDownload []ankabuffer.File
 	toDownloadFiltered := []HashFile{}
 	for _, file := range toDownload {
-		if manifest.Fragments[fragment].Files[file.Filename].Name == "" {
-			continue
+		if strings.HasPrefix(file.Filename, "REGEX:") {
+			regex := strings.TrimPrefix(file.Filename, "REGEX:")
+			compiled := regexp.MustCompile(regex)
+			for key := range manifest.Fragments[fragment].Files {
+				if compiled.MatchString(key) {
+					if manifest.Fragments[fragment].Files[key].Name == "" {
+						continue
+					}
+					toDownloadFiltered = append(toDownloadFiltered, HashFile{Filename: key, Hash: file.Hash, FriendlyName: file.FriendlyName})
+				}
+			}
+		} else {
+			if manifest.Fragments[fragment].Files[file.Filename].Name == "" {
+				continue
+			}
+			toDownloadFiltered = append(toDownloadFiltered, file)
 		}
-		toDownloadFiltered = append(toDownloadFiltered, file)
 	}
 
 	toDownload = toDownloadFiltered
@@ -916,10 +931,6 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 			}()
 		}
 
-		if !muteSpinner {
-			feedbacks <- fmt.Sprintf("preparing %d files", len(filesToDownload))
-		}
-
 		bundles := ankabuffer.GetNeededBundles(filesToDownload)
 
 		if len(bundles) == 0 && len(filesToDownload) > 0 {
@@ -947,7 +958,15 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 		bundlesBuffer := make(map[string]DownloadedBundle)
 
 		if !muteSpinner {
-			feedbacks <- "downloading"
+			filesStr := "files"
+			if len(filesToDownload) == 1 {
+				filesStr = "file"
+			}
+			bundlesStr := "bundles"
+			if len(bundles) == 1 {
+				bundlesStr = "bundle"
+			}
+			feedbacks <- fmt.Sprintf("⬇️ %d %s (%d %s)", len(filesToDownload), filesStr, len(bundles), bundlesStr)
 			close(feedbacks)
 		}
 		feedbackWg.Wait()
@@ -1071,7 +1090,7 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 					}
 				}()
 
-				log.Infof("%s ✅", filepath.Base(file.Name))
+				//log.Infof("%s ✅", filepath.Base(file.Name))
 
 				if unpack {
 					Unpack(offlineFilePath, dir, destDir, title, indent, muteSpinner, silent)

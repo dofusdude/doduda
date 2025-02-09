@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.5.10"
+	DodudaVersion     = "v0.6.0"
 	DodudaShort       = "doduda - Dofus data CLI"
 	DodudaLong        = "CLI for Dofus asset downloading and unpacking."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
@@ -91,17 +91,69 @@ func main() {
 	log.SetLevel(parsedLevel)
 
 	rootCmd.Flags().Bool("version", false, "Print the doduda version.")
-	rootCmd.Flags().Bool("full", false, "Download the full game like the Ankama Launcher.")
+	rootCmd.Flags().Bool("full-raw", false, "Download the full game like the Ankama Launcher.")
 	rootCmd.PersistentFlags().BoolP("cache-ignore", "c", false, "Do not use cached manifest.")
-	//rootCmd.Flags().Bool("incremental", false, "Only download a file if the local version is different.")
 	rootCmd.Flags().Int32("bin", 500, "Divide the files into smaller bins of the given size in Megabyte to reduce overall memory usage. Disable binning with -1.")
 	rootCmd.PersistentFlags().StringP("platform", "p", "windows", "For which platform to download the game. Available: 'windows', 'macos', 'linux'.")
-	rootCmd.PersistentFlags().Bool("headless", false, "Run without a TUI.")
+	rootCmd.PersistentFlags().Bool("headless", true, "Run without a TUI. Currently under development and not recommended to disable.")
 	rootCmd.PersistentFlags().StringP("release", "r", "dofus3", "Which Game release version type to use. Available: 'main', 'beta', 'dofus3'.")
 	rootCmd.PersistentFlags().StringP("output", "o", "./data", "Working folder for output or input.")
 	rootCmd.PersistentFlags().String("manifest", "", "Manifest file path. Empty will download it if it is not found.")
 	rootCmd.PersistentFlags().Int("mount-image-workers", 4, "Number of workers to use for mount image downloading.")
-	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, "Ignore downloading specific parts. Available: 'mounts', 'languages', 'items', 'itemsimages', 'mountsimages', 'quests', 'achievements'.")
+	rootCmd.PersistentFlags().StringArrayP("ignore", "i", []string{}, `Exclude categories of content from download and unpacking. Below are the categories available for both Dofus 2 and Dofus 3.
+
+Join them with a '-'. Example: --i images-items --i data-language.
+
+For Dofus 2
+  - images
+    - items
+
+  - data
+    - languages
+    - items
+    - quests
+    - achievements
+
+  - images
+    - mounts
+
+For Dofus 3
+  - images
+    - worldmaps
+    - ui
+      - ornaments
+      - documents
+      - guidebook
+      - house
+      - illustration
+    - misc
+      - suggestions
+      - icons
+      - flags
+      - guildranks
+      - arena
+    - achievement_categories
+    - achievements
+    - spell_states
+    - items
+    - mounts
+    - emotes
+    - class_heads
+    - alignment
+    - challenges
+    - companions
+    - cosmetics
+    - smileys
+    - jobs
+    - emblems
+    - monsters
+    - spells
+    - statistics
+
+Regex example:
+	-i 'images-*' -> downloads and unpacks everything except images.
+	-i '^(data-|images-(?!ui-ornaments)).*' -> downloads and unpacks *only* the images-ui-ornaments.`)
+
 	rootCmd.PersistentFlags().BoolP("indent", "I", false, "Indent the JSON output (increases file size)")
 	rootCmd.PersistentFlags().String("dofus-version", "latest", "Specify Dofus version to download. Example: 2.60.0")
 
@@ -388,7 +440,7 @@ func rootCommand(ccmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	fullGame, err := ccmd.Flags().GetBool("full")
+	fullGame, err := ccmd.Flags().GetBool("full-raw")
 	if err != nil {
 		log.Fatal(err)
 	}
