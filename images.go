@@ -558,7 +558,9 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 			feedbackWg.Wait()
 		}()
 
-		feedbacks <- "⬇️ in parallel"
+		if maxConcurrentDownloads > 0 {
+			feedbacks <- "⬇️ in parallel"
+		}
 
 		semaphore := make(chan struct{}, maxConcurrentDownloads)
 		errorChan := make(chan error, totalDownloads)
