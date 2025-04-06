@@ -672,7 +672,7 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 
 		absInputPath := filepath.Join(inputDir, bundle.Name())
 
-		cmd := []string{"./data", "--unity-version", "2022.3.29f1"}
+		cmd := []string{"./data", "--unity-version", "6000.0.41.58439"}
 
 		uid := strconv.Itoa(os.Getuid())
 		gid := strconv.Itoa(os.Getgid())
