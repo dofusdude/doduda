@@ -22,7 +22,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spelltypesroot.asset.bundle", FriendlyName: "spell_types.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breedsroot.asset.bundle", FriendlyName: "breeds.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breedrolesroot.asset.bundle", FriendlyName: "breed_roles.asset.bundle"},
-			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_characteristicsroot.asset.bundle", FriendlyName: "caharcteristics.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_characteristicsroot.asset.bundle", FriendlyName: "characteristics.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_characterxpmappingsroot.asset.bundle", FriendlyName: "char_xp_mappings.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_mountsroot.asset.bundle", FriendlyName: "mounts.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_monsterracesroot.asset.bundle", FriendlyName: "monster_races.asset.bundle"},
