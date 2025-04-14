@@ -21,6 +21,9 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellsroot.asset.bundle", FriendlyName: "spells.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spelltypesroot.asset.bundle", FriendlyName: "spell_types.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breedsroot.asset.bundle", FriendlyName: "breeds.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breedrolesroot.asset.bundle", FriendlyName: "breed_roles.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_characteristicsroot.asset.bundle", FriendlyName: "caharcteristics.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_characterxpmappingsroot.asset.bundle", FriendlyName: "char_xp_mappings.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_mountsroot.asset.bundle", FriendlyName: "mounts.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_monsterracesroot.asset.bundle", FriendlyName: "monster_races.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_monstersroot.asset.bundle", FriendlyName: "monsters.asset.bundle"},
@@ -42,6 +45,14 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellstatesroot.asset.bundle", FriendlyName: "spell_states.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellvariantsroot.asset.bundle", FriendlyName: "spell_variants.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spelllevelsroot.asset.bundle", FriendlyName: "spell_levels.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_custommodebreedspellsroot.asset.bundle", FriendlyName: "custom_breed_spells.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_forgettablespellsroot.asset.bundle", FriendlyName: "forgettable_spells.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellbombsroot.asset.bundle", FriendlyName: "bomb_spells.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellconversionsroot.asset.bundle", FriendlyName: "spell_conversions.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellscriptsroot.asset.bundle", FriendlyName: "spell_scripts.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_areasroot.asset.bundle", FriendlyName: "areas_loot.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breachworldmapcoordinatesroot.asset.bundle", FriendlyName: "breach_worldmap_coordinates.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breachworldmapsectorsroot.asset.bundle", FriendlyName: "breach_worldmap_sectors.asset.bundle"},
 		}
 
 		err := DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
