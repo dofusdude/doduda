@@ -50,7 +50,8 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellbombsroot.asset.bundle", FriendlyName: "bomb_spells.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellconversionsroot.asset.bundle", FriendlyName: "spell_conversions.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_spellscriptsroot.asset.bundle", FriendlyName: "spell_scripts.asset.bundle"},
-			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_areasroot.asset.bundle", FriendlyName: "areas_loot.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_subareasroot.asset.bundle", FriendlyName: "subareas.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_superareasroot.asset.bundle", FriendlyName: "superareas.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breachworldmapcoordinatesroot.asset.bundle", FriendlyName: "breach_worldmap_coordinates.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breachworldmapsectorsroot.asset.bundle", FriendlyName: "breach_worldmap_sectors.asset.bundle"},
 		}
