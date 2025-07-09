@@ -19,6 +19,8 @@ import (
 
 	"github.com/dlclark/regexp2"
 
+	"slices"
+
 	"github.com/charmbracelet/log"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
@@ -729,13 +731,7 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
 
 	supportedUnpack := []string{"d2o", "d2i", "imagebundle", "bundle", "bin"}
-	isSupported := false
-	for _, unpackType := range supportedUnpack {
-		if suffix == unpackType {
-			isSupported = true
-			break
-		}
-	}
+	isSupported := slices.Contains(supportedUnpack, suffix)
 
 	if !isSupported {
 		log.Warnf("Unsupported file type for unpacking %s", suffix)
