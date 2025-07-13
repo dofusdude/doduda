@@ -15,16 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.21"
       - name: Prefetch docker images
         run: |
           docker pull stelzo/doduda-umbu:amd64
           docker pull stelzo/assetstudio-cli:amd64
-      - name: Build
-        run: go build -v .
+      - name: Get doduda
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${{ github.event.inputs.release }}" == "dofus3" || "${{ github.event.inputs.release }}" == "main" ]]; then
+            gh release download -R dofusdude/doduda -p "doduda_Linux_x86_64.tar.gz"
+          else
+            gh release download -R dofusdude/doduda -p "doduda_Linux_x86_64.tar.gz" v0.6.9-beta1
+          fi
+          tar -xzf "doduda_Linux_x86_64.tar.gz"
+          chmod +x doduda
+          ./doduda --version
       - name: Run and Update
         run: |
           ./doduda --headless --ignore 'images-*' --release ${{ github.event.inputs.release }}
