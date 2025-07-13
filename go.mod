@@ -12,7 +12,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/docker/docker v28.3.1+incompatible
 	github.com/dofusdude/ankabuffer v0.1.0
-	github.com/dofusdude/dodumap v0.6.4
+	github.com/dofusdude/dodumap v0.6.5
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/xhhuango/json v1.19.0
