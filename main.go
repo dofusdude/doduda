@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.6.9-beta1"
+	DodudaVersion     = "v0.6.9"
 	DodudaShort       = "doduda - Dofus data CLI"
 	DodudaLong        = "CLI for Dofus asset downloading and unpacking."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
