@@ -32,7 +32,6 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_companionsroot.asset.bundle", FriendlyName: "companions.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_areasroot.asset.bundle", FriendlyName: "areas.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_mountfamilyroot.asset.bundle", FriendlyName: "mount_family.asset.bundle"},
-			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_npcsroot.asset.bundle", FriendlyName: "npcs.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_servergametypesroot.asset.bundle", FriendlyName: "server_game_types.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_characteristiccategoriesroot.asset.bundle", FriendlyName: "chars_categories.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_creaturebonestypesroot.asset.bundle", FriendlyName: "creature_bone_types.asset.bundle"},
@@ -54,6 +53,12 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_superareasroot.asset.bundle", FriendlyName: "superareas.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breachworldmapcoordinatesroot.asset.bundle", FriendlyName: "breach_worldmap_coordinates.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_breachworldmapsectorsroot.asset.bundle", FriendlyName: "breach_worldmap_sectors.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_npcsroot.asset.bundle", FriendlyName: "npcs.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_npcactionsroot.asset.bundle", FriendlyName: "npc_actions.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_npcdialogskinroot.asset.bundle", FriendlyName: "npc_dialogskin.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_npcmessagesroot.asset.bundle", FriendlyName: "npc_messages.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_infomessagesroot.asset.bundle", FriendlyName: "info_messages.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_calendareventsroot.asset.bundle", FriendlyName: "event_calendar.asset.bundle"},
 		}
 
 		err := DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
