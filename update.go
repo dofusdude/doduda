@@ -1,12 +1,16 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
@@ -44,11 +48,7 @@ func PartitionSlice[T any](items []T, parts int) (chunks [][]T) {
 	chunkSize := (len(items) + parts - 1) / parts
 
 	for i := 0; i < len(items); i += chunkSize {
-		end := i + chunkSize
-
-		if end > len(items) {
-			end = len(items)
-		}
+		end := min(i+chunkSize, len(items))
 
 		divided = append(divided, items[i:end])
 	}
@@ -111,7 +111,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.png", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.png", mountId)
 			outPath := filepath.Join(dir, "img", "mount")
-			_ = DownloadUnpackFiles("Mount Bitmaps", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
+			_ = DownloadUnpackFiles("Mount Bitmaps", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true, true)
 		}(mount.Id, &wg, dir)
 
 		wg.Add(1)
@@ -127,7 +127,7 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 			image.Filename = fmt.Sprintf("content/gfx/mounts/%d.swf", mountId)
 			image.FriendlyName = fmt.Sprintf("%d.swf", mountId)
 			outPath := filepath.Join(dir, "vector", "mount")
-			_ = DownloadUnpackFiles("Mount Vectors", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true)
+			_ = DownloadUnpackFiles("Mount Vectors", bin, manifest, fragment, []HashFile{image}, dir, outPath, false, "", true, true, true)
 		}(mount.Id, &wg, dir)
 
 		wg.Wait()
@@ -147,35 +147,18 @@ func GetLatestLauncherVersion(release string) string {
 		log.Fatal(err)
 	}
 
-	var versionJson map[string]interface{}
+	var versionJson map[string]any
 	err = json.Unmarshal(versionBody, &versionJson)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	games := versionJson["games"].(map[string]interface{})
-	dofus := games["dofus"].(map[string]interface{})
-	platform := dofus["platforms"].(map[string]interface{})
-	windows := platform["windows"].(map[string]interface{})
+	games := versionJson["games"].(map[string]any)
+	dofus := games["dofus"].(map[string]any)
+	platform := dofus["platforms"].(map[string]any)
+	windows := platform["windows"].(map[string]any)
 
 	return windows[release].(string)
-}
-
-func touchFileIfNotExists(fileName string) error {
-	_, err := os.Stat(fileName)
-	if os.IsNotExist(err) {
-		file, err := os.Create(fileName)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := file.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}()
-	}
-
-	return nil
 }
 
 func CreateDataDirectoryStructure(dir string) {
@@ -221,12 +204,7 @@ func contains(arr []string, str string) bool {
 	if arr == nil {
 		return false
 	}
-	for _, s := range arr {
-		if s == str {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(arr, str)
 }
 
 // ported from https://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable-string
@@ -403,7 +381,7 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 		for fragmentName, files := range fragmentFiles {
 			fragmentCounter++
 			feedbacks <- "Fragment " + strconv.Itoa(fragmentCounter) + "/" + strconv.Itoa(totalFragments)
-			err = DownloadUnpackFiles(ankaManifest.GameVersion, bin, &ankaManifest, fragmentName, files, dir, dir, false, "", headless, false)
+			err = DownloadUnpackFiles(ankaManifest.GameVersion, bin, &ankaManifest, fragmentName, files, dir, dir, false, "", headless, false, true)
 			if err != nil {
 				return err
 			}
@@ -436,6 +414,12 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 
 		if !ignoresRegex(ignore, "data-items") {
 			if err := DownloadItems(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if !ignoresRegex(ignore, "data-map") {
+			if err := DownloadMaps(&ankaManifest, bin, rawDofusMajorVersion, dir, indent, headless); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -652,6 +636,40 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 	return nil
 }
 
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func mergeDirs(src, dest string) error {
+	if err := os.MkdirAll(dest, 0755); err != nil {
+		return fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	dirEntries, err := os.ReadDir(src)
+	if err != nil {
+		return fmt.Errorf("failed to read source directory: %w", err)
+	}
+
+	for _, entry := range dirEntries {
+		srcPath := filepath.Join(src, entry.Name())
+		destPath := filepath.Join(dest, entry.Name())
+		if err := os.Rename(srcPath, destPath); err != nil {
+			return fmt.Errorf("failed to move '%s' to '%s': %w", srcPath, destPath, err)
+		}
+	}
+	if err := os.Remove(src); err != nil {
+		return fmt.Errorf("failed to remove source directory: %w", err)
+	}
+
+	return nil
+}
+
 func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -680,6 +698,7 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 		gid := strconv.Itoa(os.Getgid())
 		user := uid + ":" + gid
 
+		tmpOutputDir := path.Join(outputDir, randSeq(10))
 		resp, err := cli.ContainerCreate(ctx, &container.Config{
 			Image: imageName,
 			Cmd:   cmd,
@@ -691,7 +710,7 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 		}, &container.HostConfig{
 			Binds: []string{
 				fmt.Sprintf("%s:/app/AssetStudio/data", absInputPath),
-				fmt.Sprintf("%s:/app/AssetStudio/ASExport", outputDir)},
+				fmt.Sprintf("%s:/app/AssetStudio/ASExport", tmpOutputDir)},
 			AutoRemove: true,
 		}, nil, nil, "")
 		if err != nil {
@@ -716,6 +735,236 @@ func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, head
 	return nil
 }
 
+func TruncateAndCompactJSON(data []byte) ([]byte, error) {
+	re := regexp.MustCompile(`(,\s*)?"references"`)
+	loc := re.FindIndex(data)
+
+	var repairedData []byte
+	if loc == nil {
+		repairedData = data
+	} else {
+		truncatedData := data[:loc[0]]
+
+		trimmed := bytes.TrimRight(truncatedData, " \t\n\r")
+		if len(trimmed) > 0 && trimmed[len(trimmed)-1] == ',' {
+			lastCommaIndex := bytes.LastIndex(truncatedData, []byte{','})
+			truncatedData = truncatedData[:lastCommaIndex]
+		}
+
+		var stack []byte
+		inString := false
+		for i := range truncatedData {
+			char := truncatedData[i]
+			if char == '"' {
+				slashCount := 0
+				for j := i - 1; j >= 0; j-- {
+					if truncatedData[j] == '\\' {
+						slashCount++
+					} else {
+						break
+					}
+				}
+				if slashCount%2 == 0 {
+					inString = !inString
+				}
+			}
+
+			if inString {
+				continue
+			}
+
+			switch char {
+			case '{', '[':
+				stack = append(stack, char) // Push opener onto the stack.
+			case '}':
+				if len(stack) > 0 && stack[len(stack)-1] == '{' {
+					stack = stack[:len(stack)-1] // Pop
+				}
+			case ']':
+				if len(stack) > 0 && stack[len(stack)-1] == '[' {
+					stack = stack[:len(stack)-1] // Pop
+				}
+			}
+		}
+		repairedData = truncatedData
+		for i := len(stack) - 1; i >= 0; i-- {
+			opener := stack[i]
+			if opener == '{' {
+				repairedData = append(repairedData, '}')
+			} else if opener == '[' {
+				repairedData = append(repairedData, ']')
+			}
+		}
+	}
+
+	var v any
+	if err := json.Unmarshal(repairedData, &v); err != nil {
+		return nil, fmt.Errorf("validation failed on truncated data: %w", err)
+	}
+
+	compactData, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("failed to re-marshal sanitized JSON: %w", err)
+	}
+
+	return compactData, nil
+}
+
+func UnpackUnityMap(input string, outputDir string, muteSpinner bool, headless bool) error {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cli.Close()
+
+	imageName := "stelzo/assetstudio-cli:" + ARCH
+
+	ctx := context.Background()
+	inputDir := filepath.Dir(input)
+	inputName := strings.TrimSuffix(filepath.Base(input), filepath.Ext(input))
+	bundles, err := os.ReadDir(inputDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, bundle := range bundles {
+		if bundle.IsDir() || !strings.HasSuffix(bundle.Name(), ".mapbundle") {
+			continue
+		}
+
+		absInputPath := filepath.Join(inputDir, bundle.Name())
+
+		cmd := []string{"./data", "--unity-version", "6000.0.41.58439"}
+
+		uid := strconv.Itoa(os.Getuid())
+		gid := strconv.Itoa(os.Getgid())
+		user := uid + ":" + gid
+
+		tmpOutputDir, err := os.MkdirTemp(outputDir, "temp-unpack-")
+		if err != nil {
+			log.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpOutputDir)
+
+		resp, err := cli.ContainerCreate(ctx, &container.Config{
+			Image: imageName,
+			Cmd:   cmd,
+			User:  user,
+			Volumes: map[string]struct{}{
+				"/app/AssetStudio/data":     {},
+				"/app/AssetStudio/ASExport": {},
+			},
+		}, &container.HostConfig{
+			Binds: []string{
+				fmt.Sprintf("%s:/app/AssetStudio/data", absInputPath),
+				fmt.Sprintf("%s:/app/AssetStudio/ASExport", tmpOutputDir)},
+			AutoRemove: true,
+		}, nil, nil, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+			return err
+		}
+
+		statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+		case <-statusCh:
+		}
+
+		processedJSONs := make(map[string][]byte)
+		filePattern := regexp.MustCompile(`_#\d+\.json$`)
+
+		err = filepath.WalkDir(tmpOutputDir, func(mpath string, d fs.DirEntry, err error) error {
+			if err != nil {
+				log.Printf("Error accessing path %q: %v\n", mpath, err)
+				return err
+			}
+			if d.IsDir() {
+				return nil
+			}
+
+			if filePattern.MatchString(d.Name()) {
+				return os.Remove(mpath)
+			}
+
+			if filepath.Ext(d.Name()) == ".json" {
+				fileBytes, err := os.ReadFile(mpath)
+				if err != nil {
+					log.Printf("Failed to read file %s: %v", mpath, err)
+					return nil // Continue with other files
+				}
+
+				modifiedBytes, err := TruncateAndCompactJSON(fileBytes)
+				if err != nil {
+					log.Printf("Failed to process file %s: %v", mpath, err)
+					return nil // Continue with other files
+				}
+
+				relPath, err := filepath.Rel(tmpOutputDir, mpath)
+				if err != nil {
+					return err
+				}
+				processedJSONs[relPath] = modifiedBytes
+
+				return os.Remove(mpath)
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("error walking temp directory: %w", err)
+		}
+
+		if len(processedJSONs) > 0 {
+			archiveName := inputName + ".tar.gz"
+			archivePath := filepath.Join(outputDir, archiveName)
+
+			archiveFile, err := os.Create(archivePath)
+			if err != nil {
+				return fmt.Errorf("failed to create archive file: %w", err)
+			}
+			defer archiveFile.Close()
+
+			gw := gzip.NewWriter(archiveFile)
+			defer gw.Close()
+
+			tw := tar.NewWriter(gw)
+			defer tw.Close()
+
+			for name, content := range processedJSONs {
+				hdr := &tar.Header{
+					Name: name,
+					Mode: 0644,
+					Size: int64(len(content)),
+				}
+				if err := tw.WriteHeader(hdr); err != nil {
+					return fmt.Errorf("failed to write tar header: %w", err)
+				}
+				if _, err := tw.Write(content); err != nil {
+					return fmt.Errorf("failed to write tar content: %w", err)
+				}
+			}
+		}
+
+		err = mergeDirs(tmpOutputDir, outputDir)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+const maxUnpackConcurrency = 1
+
+var unpackMapSemaphore = make(chan struct{}, maxUnpackConcurrency)
+
 func Unpack(file string, dir string, destDir string, category string, indent string, muteSpinner bool, headless bool) {
 	suffix := filepath.Ext(file)[1:]
 
@@ -730,7 +979,7 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 	fileNoExt := strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
 	absOutPath := filepath.Join(destDir, fileNoExt+".json")
 
-	supportedUnpack := []string{"d2o", "d2i", "imagebundle", "bundle", "bin"}
+	supportedUnpack := []string{"d2o", "d2i", "imagebundle", "bundle", "bin", "mapbundle"}
 	isSupported := slices.Contains(supportedUnpack, suffix)
 
 	if !isSupported {
@@ -811,6 +1060,17 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 		}
 	}
 
+	if suffix == "mapbundle" {
+		unpackMapSemaphore <- struct{}{}
+		defer func() {
+			<-unpackMapSemaphore
+		}()
+		err := UnpackUnityMap(file, destDir, muteSpinner, headless)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	if suffix == "bundle" {
 		err := UnpackUnityBundle(category, file, absOutPath, muteSpinner, headless)
 		if err != nil {
@@ -876,7 +1136,7 @@ func splitFilesIntoBins(files []ankabuffer.File, maxMBPerBin int) [][]ankabuffer
 	return bins
 }
 
-func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string, silent bool, muteSpinner bool) error {
+func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, fragment string, toDownload []HashFile, dir string, destDir string, unpack bool, indent string, silent bool, muteSpinner bool, clean_after bool) error {
 	var filesToDownload []ankabuffer.File
 	toDownloadFiltered := []HashFile{}
 	for _, file := range toDownload {
@@ -1062,7 +1322,13 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 					log.Fatal(err)
 				}
 
-				offlineFilePath := filepath.Join(destDir, toDownload[i].FriendlyName)
+				var offlineFilePath string
+				if clean_after {
+					offlineFilePath = filepath.Join(destDir, toDownload[i].FriendlyName)
+				} else {
+					// TODO better names for "clean after" since the behavior is very different
+					offlineFilePath = filepath.Join(destDir, strings.ReplaceAll(file.Name, filepath.Ext(file.Name), filepath.Ext(toDownload[i].FriendlyName)))
+				}
 
 				// anonymous function to safely defer closing file
 				func() {
@@ -1086,13 +1352,16 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 					}
 				}()
 
-				//log.Infof("%s ✅", filepath.Base(file.Name))
+				log.Printf("Loaded %s. Unpacking...", filepath.Base(offlineFilePath))
 
 				if unpack {
 					Unpack(offlineFilePath, dir, destDir, title, indent, muteSpinner, silent)
-					err := os.Remove(offlineFilePath)
-					if err != nil {
-						log.Fatal(err)
+					log.Printf("%s ✅", filepath.Base(offlineFilePath))
+					if clean_after {
+						err := os.Remove(offlineFilePath)
+						if err != nil {
+							log.Fatal(err)
+						}
 					}
 				}
 

@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/dofusdude/ankabuffer"
@@ -61,10 +64,21 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_calendareventsroot.asset.bundle", FriendlyName: "event_calendar.asset.bundle"},
 		}
 
-		err := DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Items", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false, true)
 		if err != nil {
 			return err
 		}
+
+		fileNames = []HashFile{
+			{Filename: "Dofus_Data/StreamingAssets/aa/StandaloneWindows64/worldassets_assets_all.bundle", FriendlyName: "worldassets.imagebundle"},
+		}
+		err = DownloadUnpackFiles("Worldgraph", bin, hashJson, "win32_x64", fileNames, dir, outPath, true, indent, headless, false, true)
+		if err != nil {
+			return err
+		}
+		worldgraph_source := filepath.Join(outPath, "WorldData", "world-graph.json")
+		worldgraph_target := filepath.Join(outPath, "world_graph.json")
+		os.Rename(worldgraph_source, worldgraph_target)
 
 		return nil
 	} else if version == 2 {
@@ -97,10 +111,44 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "data/common/Titles.d2o", FriendlyName: "titles.d2o"},
 		}
 
-		err := DownloadUnpackFiles("Items", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Items", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false, true)
 
 		return err
 	} else {
+		return errors.New("unsupported version: " + strconv.Itoa(version))
+	}
+}
+
+func DownloadMaps(hashJson *ankabuffer.Manifest, bin int, version int, dir string, indent string, headless bool) error {
+	outPath := dir
+
+	if version == 3 {
+		fileNames := []HashFile{
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_mappositionsroot.asset.bundle", FriendlyName: "map_positions.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_mapcoordinatesroot.asset.bundle", FriendlyName: "map_coordinates.asset.bundle"},
+		}
+
+		err := DownloadUnpackFiles("Map Metadata", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false, true)
+		if err != nil {
+			return err
+		}
+
+		fileNames = []HashFile{
+			{Filename: `REGEX:Dofus_Data/StreamingAssets/Content/Map/Data/mapdata_assets_world_\d+\.bundle`, FriendlyName: "map.mapbundle"},
+		}
+
+		mapOutPath := path.Join(outPath, "map")
+		err = DownloadUnpackFiles("Map", bin, hashJson, "map_common", fileNames, dir, mapOutPath, true, indent, headless, false, false)
+		if err != nil {
+			return err
+		}
+
+		err = os.RemoveAll(path.Join(outPath, "Dofus_Data"))
+
+		return err
+
+	} else {
+		// This might throw an error on every Dofus 2 download without an ignore but I think it is currently impossible to load Dofus 2 data.
 		return errors.New("unsupported version: " + strconv.Itoa(version))
 	}
 }

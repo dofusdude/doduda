@@ -16,11 +16,11 @@ func DownloadLanguageFiles(hashJson *ankabuffer.Manifest, bin int, version int, 
 		var langFile HashFile
 		langFile.Filename = "data/i18n/i18n_" + lang + ".d2i"
 		langFile.FriendlyName = lang + ".d2i"
-		err := DownloadUnpackFiles(lang, bin, hashJson, "lang_"+lang, []HashFile{langFile}, dir, destPath, true, indent, headless, false)
+		err := DownloadUnpackFiles(lang, bin, hashJson, "lang_"+lang, []HashFile{langFile}, dir, destPath, true, indent, headless, false, true)
 		return err
 	} else if version == 3 {
 		var langFile = HashFile{Filename: fmt.Sprintf("Dofus_Data/StreamingAssets/Content/I18n/%s.bin", lang), FriendlyName: lang + ".bin"}
-		err := DownloadUnpackFiles(lang, bin, hashJson, "i18n", []HashFile{langFile}, dir, destPath, true, indent, headless, false)
+		err := DownloadUnpackFiles(lang, bin, hashJson, "i18n", []HashFile{langFile}, dir, destPath, true, indent, headless, false, true)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))

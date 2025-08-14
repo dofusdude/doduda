@@ -20,7 +20,7 @@ func DownloadAchievements(hashJson *ankabuffer.Manifest, bin int, version int, d
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_achievementprogressroot.asset.bundle", FriendlyName: "achievement_progress.asset.bundle"},
 		}
 
-		err := DownloadUnpackFiles("Achievements", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Achievements", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false, true)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))

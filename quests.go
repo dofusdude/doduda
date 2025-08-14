@@ -20,7 +20,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir str
 			{Filename: "data/common/AlmanaxCalendars.d2o", FriendlyName: "almanax.d2o"},
 		}
 
-		err := DownloadUnpackFiles("Quests", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Quests", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false, true)
 		return err
 	} else if version == 3 {
 		fileNames := []HashFile{
@@ -32,7 +32,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir str
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_almanaxcalendarsroot.asset.bundle", FriendlyName: "almanax.asset.bundle"},
 		}
 
-		err := DownloadUnpackFiles("Quests", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
+		err := DownloadUnpackFiles("Quests", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false, true)
 		return err
 	} else {
 		return errors.New("unsupported version: " + strconv.Itoa(version))

@@ -118,6 +118,12 @@ For Dofus 2
     - mounts
 
 For Dofus 3
+  - data
+    - languages
+    - items
+    - map
+    - quests
+    - achievements
   - images
     - worldmaps
     - ui

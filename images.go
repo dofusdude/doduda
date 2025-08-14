@@ -233,7 +233,7 @@ func rename_or_rmfirst(from string, to string) error {
 }
 
 func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bin int, hashJson *ankabuffer.Manifest, dir string, outPath string, fileNames []HashFile, semaphore chan struct{}, feedbacks chan string, innerTopicPlural string, resolutionMap map[string]*int, ressubdirs ...string) {
-	err := DownloadUnpackFiles(topic+" 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", true, true)
+	err := DownloadUnpackFiles(topic+" 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", true, true, true)
 	if err != nil {
 		errorChan <- err
 	}
@@ -298,7 +298,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 		inPath := filepath.Join(dir, "tmp")
 
 		if !ignoresRegex(ignore, "images-items") {
-			if err := DownloadUnpackFiles("Item Bitmaps", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Item Bitmaps", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false, true); err != nil {
 				return err
 			}
 			outPath := filepath.Join(dir, "img", "item")
@@ -314,7 +314,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 
 			inPath = filepath.Join(dir, "tmp", "vector")
 			outPath = filepath.Join(dir, "vector", "item")
-			if err := DownloadUnpackFiles("Item Vectors", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Item Vectors", bin, hashJson, "main", fileNames, dir, inPath, false, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -331,7 +331,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "REGEX:Dofus_Data/StreamingAssets/Content/Picto/Worldmaps/worldmap_assets__*", FriendlyName: "worldmap_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Worldmap 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Worldmap 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -345,7 +345,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/ornament_assets_all.bundle", FriendlyName: "ornament_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("UI Ornaments 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("UI Ornaments 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -361,7 +361,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/document_assets_all.bundle", FriendlyName: "document_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("UI Documents 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("UI Documents 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -377,7 +377,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/guidebook_assets_all.bundle", FriendlyName: "guidebook_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("UI Guidebook 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("UI Guidebook 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -393,7 +393,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/house_assets_all.bundle", FriendlyName: "house_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("UI House 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("UI House 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -409,7 +409,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/illus_assets_all.bundle", FriendlyName: "illustration_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("UI Illustration 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("UI Illustration 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 		}
@@ -421,7 +421,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/suggestion_assets_all.bundle", FriendlyName: "suggestion_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Suggestion 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Suggestion 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -437,7 +437,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/icon_assets_all.bundle", FriendlyName: "icon_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Icon 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Icon 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -453,7 +453,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/flag_assets_all.bundle", FriendlyName: "flag_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Flag 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Flag 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -469,7 +469,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/guildrank_assets_all.bundle", FriendlyName: "guildrank_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Guildrank 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Guildrank 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -486,7 +486,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/arena_assets_all.bundle", FriendlyName: "arena_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Arena 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Arena 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -502,7 +502,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/achievementcategory_assets_all.bundle", FriendlyName: "achievement_category_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Achievement Category 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Achievement Category 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -518,7 +518,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/achievement_assets_all.bundle", FriendlyName: "achievement_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Achievement 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Achievement 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 
@@ -534,7 +534,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				{Filename: "Dofus_Data/StreamingAssets/Content/Picto/Spells/spellstate_assets_all.bundle", FriendlyName: "spell_state_images.imagebundle"},
 			}
 
-			if err := DownloadUnpackFiles("Spell State 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false); err != nil {
+			if err := DownloadUnpackFiles("Spell State 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", headless, false, true); err != nil {
 				return err
 			}
 			if err := cleanImages(outPath, nil); err != nil {
