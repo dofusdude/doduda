@@ -254,5 +254,8 @@
     "Be subscribed",
     "Action Points (AP)",
     "Movement Points (MP)",
-    "Attracts by cell (Active)"
+    "Attracts by cell (Active)",
+    "Gives the spell:",
+    "best-element steal (Active)",
+    "Advances by cell (Active)"
 ]
