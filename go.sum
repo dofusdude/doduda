@@ -55,6 +55,8 @@ github.com/dofusdude/dodumap v0.6.8 h1:nj+hIfBYdjnOtOfr1/eZQ5EU9GT2eamWUO47OCPeB
 github.com/dofusdude/dodumap v0.6.8/go.mod h1:51KG2eMd02UJnXErOubAukVftYuJproDHqJcbIHSzIE=
 github.com/dofusdude/dodumap v0.6.9 h1:KzTtCgLHMIP/UpncD/eEp2YwJdX4MZ5y9Zkig6If+j4=
 github.com/dofusdude/dodumap v0.6.9/go.mod h1:51KG2eMd02UJnXErOubAukVftYuJproDHqJcbIHSzIE=
+github.com/dofusdude/dodumap v0.6.10 h1:3KI9aB8aaSS/wNkcbkT567+RjRfSToLjG8zD8NhZIcs=
+github.com/dofusdude/dodumap v0.6.10/go.mod h1:51KG2eMd02UJnXErOubAukVftYuJproDHqJcbIHSzIE=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=
