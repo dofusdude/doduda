@@ -46,7 +46,10 @@ func VersionChanged(dir string, gameVersion string, versionFilePath string, cust
 		versionFile.Main = "-"
 	}
 
-	serverVersion := GetLatestLauncherVersion(gameVersion)
+	serverVersion, err := GetLatestLauncherVersion(gameVersion)
+	if err != nil {
+		return false, "", "", fmt.Errorf("failed to get latest version: %w", err)
+	}
 	serverVersion = serverVersion[4:] // removing updater version
 
 	var versionChanged bool

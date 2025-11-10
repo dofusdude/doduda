@@ -326,7 +326,11 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 	if manifestPath == "" || clean {
 		cytrusPrefix := "6.0_"
 		if version == "latest" {
-			version = GetLatestLauncherVersion(releaseChannel)
+			var err error
+			version, err = GetLatestLauncherVersion(releaseChannel)
+			if err != nil {
+				return err
+			}
 		} else {
 			// ATT: prefix changes with cytrus updates
 			if !strings.HasPrefix(version, cytrusPrefix) {
