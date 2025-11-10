@@ -108,6 +108,7 @@ func watchdogTick(endTimer chan bool, dir string, gameRelease string, versionFil
 	changed, oldVersion, newVersion, err := VersionChanged(dir, gameRelease, versionFilePath, customBodyPath, volatile, initialHook)
 
 	if err != nil {
+		// Log the error but don't terminate - allows watchdog to recover from transient failures
 		log.Error(err)
 	} else {
 		if changed {
