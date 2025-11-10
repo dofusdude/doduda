@@ -143,6 +143,11 @@ func GetLatestLauncherVersion(release string) (string, error) {
 	}
 	defer versionResponse.Body.Close()
 
+	// Check HTTP status code
+	if versionResponse.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("cytrus.json returned HTTP %d", versionResponse.StatusCode)
+	}
+
 	versionBody, err := io.ReadAll(versionResponse.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read cytrus.json response: %w", err)
