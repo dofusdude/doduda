@@ -136,29 +136,51 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 	feedbackWg.Wait()
 }
 
-func GetLatestLauncherVersion(release string) string {
+func GetLatestLauncherVersion(release string) (string, error) {
 	versionResponse, err := http.Get("https://cytrus.cdn.ankama.com/cytrus.json")
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("failed to fetch cytrus.json: %w", err)
 	}
+	defer versionResponse.Body.Close()
 
 	versionBody, err := io.ReadAll(versionResponse.Body)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("failed to read cytrus.json response: %w", err)
 	}
 
 	var versionJson map[string]interface{}
 	err = json.Unmarshal(versionBody, &versionJson)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("failed to parse cytrus.json: %w", err)
 	}
 
-	games := versionJson["games"].(map[string]interface{})
-	dofus := games["dofus"].(map[string]interface{})
-	platform := dofus["platforms"].(map[string]interface{})
-	windows := platform["windows"].(map[string]interface{})
+	// Safe type assertions with error checking
+	games, ok := versionJson["games"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("cytrus.json: 'games' field not found or invalid type")
+	}
 
-	return windows[release].(string)
+	dofus, ok := games["dofus"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("cytrus.json: 'games.dofus' field not found or invalid type")
+	}
+
+	platforms, ok := dofus["platforms"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("cytrus.json: 'platforms' field not found or invalid type")
+	}
+
+	windows, ok := platforms["windows"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("cytrus.json: 'windows' platform not found or invalid type")
+	}
+
+	version, ok := windows[release].(string)
+	if !ok {
+		return "", fmt.Errorf("cytrus.json: version for release '%s' not found or invalid type", release)
+	}
+
+	return version, nil
 }
 
 func touchFileIfNotExists(fileName string) error {
