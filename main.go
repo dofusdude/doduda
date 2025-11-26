@@ -289,7 +289,12 @@ func versionCommand(ccmd *cobra.Command, args []string) {
 	}
 
 	cytrusPrefix := "6.0_"
-	version := GetLatestLauncherVersion(gameRelease)
+	version, err := GetLatestLauncherVersion(gameRelease)
+	if err != nil {
+		close(feedbacks)
+		manifestWg.Wait()
+		log.Fatal(err)
+	}
 	if !strings.HasPrefix(version, cytrusPrefix) {
 		version = fmt.Sprintf("%s%s", cytrusPrefix, version)
 	}
