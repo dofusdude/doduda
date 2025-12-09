@@ -258,5 +258,7 @@
     "Gives the spell:",
     "best-element steal (Active)",
     "Advances by cell (Active)",
-    "Kills the player and turns them into a ghost"
+    "Kills the player and turns them into a ghost",
+    "Gainsx",
+    "Fire heals (Active)"
 ]
