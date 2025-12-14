@@ -252,7 +252,13 @@
     "Offer a choice",
     "Size: %",
     "Be subscribed",
-    "Action Points (AP)",
-    "Movement Points (MP)",
-    "Attracts by cell (Active)"
+    "Action Points",
+    "Movement Points",
+    "Attracts by cell (Active)",
+    "Gives the spell:",
+    "best-element steal (Active)",
+    "Advances by cell (Active)",
+    "Kills the player and turns them into a ghost",
+    "Gainsx",
+    "Fire heals (Active)"
 ]
