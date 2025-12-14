@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.6.6"
+	DodudaVersion     = "v0.6.16"
 	DodudaShort       = "doduda - Dofus data CLI"
 	DodudaLong        = "CLI for Dofus asset downloading and unpacking."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
@@ -289,7 +289,12 @@ func versionCommand(ccmd *cobra.Command, args []string) {
 	}
 
 	cytrusPrefix := "6.0_"
-	version := GetLatestLauncherVersion(gameRelease)
+	version, err := GetLatestLauncherVersion(gameRelease)
+	if err != nil {
+		close(feedbacks)
+		manifestWg.Wait()
+		log.Fatal(err)
+	}
 	if !strings.HasPrefix(version, cytrusPrefix) {
 		version = fmt.Sprintf("%s%s", cytrusPrefix, version)
 	}
