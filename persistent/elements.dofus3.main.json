@@ -260,5 +260,16 @@
     "Advances by cell (Active)",
     "Kills the player and turns them into a ghost",
     "Gainsx",
-    "Fire heals (Active)"
+    "Fire heals (Active)",
+    "Fertile",
+    "Patter Gauge + (max)",
+    "Release a group of monsters",
+    "Slapper Gauge + (max)",
+    "Unlocks a pose",
+    "Lightning Thrower Gauge + (max)",
+    "Dragobutt Gauge + (max)",
+    "Manger Gauge + (max)",
+    "Drinking Trough Gauge + (max)",
+    "Fight: (level)",
+    "Unlocks a body"
 ]
