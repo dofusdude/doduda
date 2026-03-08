@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	DodudaVersion     = "v0.6.18"
+	DodudaVersion     = "v0.7.0"
 	DodudaShort       = "doduda - Dofus data CLI"
 	DodudaLong        = "CLI for Dofus asset downloading and unpacking."
 	DodudaVersionHelp = DodudaShort + "\n" + DodudaVersion + "\nhttps://github.com/dofusdude/doduda"
@@ -136,7 +136,6 @@ For Dofus 3
     - achievements
     - spell_states
     - items
-    - mounts
     - emotes
     - class_heads
     - alignment

@@ -542,7 +542,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 			}
 		}
 
-		const totalDownloads = 14 // just to buffer, must be at least the number of go routines started below
+		const totalDownloads = 13 // just to buffer, must be at least the number of go routines started below
 
 		feedbacks := make(chan string)
 
@@ -580,22 +580,6 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 				lowRes := 64
 				highRes := 128
 				download_unpack_clean_dedup_multires(errorChan, "Items", bin, hashJson, dir, filepath.Join(dir, "img", "item"), fileNames, semaphore, feedbacks, "items", map[string]*int{"1x": &lowRes, "2x": &highRes})
-			}()
-		}
-
-		// -- mounts --
-		if !ignoresRegex(ignore, "images-mounts") {
-			wg.Add(1) // 2
-			go func() {
-				defer wg.Done()
-				semaphore <- struct{}{}
-				fileNames := []HashFile{
-					{Filename: "Dofus_Data/StreamingAssets/Content/Picto/UI/mount_assets_.bundle", FriendlyName: "mount_images.imagebundle"},
-				}
-
-				lowRes := 64
-				highRes := 256
-				download_unpack_clean_dedup_multires(errorChan, "Mounts", bin, hashJson, dir, filepath.Join(dir, "img", "mount"), fileNames, semaphore, feedbacks, "mounts", map[string]*int{"small": &lowRes, "big": &highRes})
 			}()
 		}
 

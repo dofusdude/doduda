@@ -109,18 +109,6 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 		if headless {
-			updatesChan <- "Mounts 🧠"
-		} else {
-			updatesChan <- "Mounts " + ui.HelpStyle("mapping")
-		}
-		mappedMounts := mapping.MapMounts(gameData, &languageData)
-		mappedMountsPath := filepath.Join(dir, "MAPPED_MOUNTS.json")
-		marshalSave(mappedMounts, mappedMountsPath, indent)
-
-		if isChannelClosed(updatesChan) {
-			os.Exit(1)
-		}
-		if headless {
 			updatesChan <- "Almanax 🧠"
 		} else {
 			updatesChan <- "Almanax " + ui.HelpStyle("mapping")
@@ -176,18 +164,6 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		mappedItems := mapping.MapItemsUnity(gameData, &languageData)
 		mappedItemPath := filepath.Join(dir, "MAPPED_ITEMS.json")
 		marshalSave(mappedItems, mappedItemPath, indent)
-
-		if isChannelClosed(updatesChan) {
-			os.Exit(1)
-		}
-		if headless {
-			updatesChan <- "Mounts 🧠"
-		} else {
-			updatesChan <- "Mounts " + ui.HelpStyle("mapping")
-		}
-		mappedMounts := mapping.MapMountsUnity(gameData, &languageData)
-		mappedMountsPath := filepath.Join(dir, "MAPPED_MOUNTS.json")
-		marshalSave(mappedMounts, mappedMountsPath, indent)
 
 		if isChannelClosed(updatesChan) {
 			os.Exit(1)
