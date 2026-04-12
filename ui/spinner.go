@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 type errMsg error
@@ -49,7 +49,9 @@ func initialModel(title string, feedbacks chan string, newline bool) model {
 }
 
 func (m model) Init() tea.Cmd {
-	return m.spinner.Tick
+	return func() tea.Msg {
+		return m.spinner.Tick()
+	}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -85,9 +87,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	if m.err != nil {
-		return m.err.Error()
+		return tea.NewView(m.err.Error())
 	}
 
 	var prefix string
@@ -96,7 +98,7 @@ func (m model) View() string {
 	}
 	str := fmt.Sprintf("%s%s %s %s\n", prefix, TitleStyle.Render(m.title), m.spinner.View(), m.lastUpdate)
 	if m.quitting {
-		return ""
+		return tea.NewView("")
 	}
-	return str
+	return tea.NewView(str)
 }

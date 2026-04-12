@@ -10,7 +10,8 @@ import (
 func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir string, indent string, headless bool) error {
 	outPath := dir
 
-	if version == 2 {
+	switch version {
+	case 2:
 		fileNames := []HashFile{
 			{Filename: "data/common/Quests.d2o", FriendlyName: "quests.d2o"},
 			{Filename: "data/common/QuestSteps.d2o", FriendlyName: "quest_steps.d2o"},
@@ -22,7 +23,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir str
 
 		err := DownloadUnpackFiles("Quests", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
 		return err
-	} else if version == 3 {
+	case 3:
 		fileNames := []HashFile{
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_questsdataroot.asset.bundle", FriendlyName: "quests.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_queststepsdataroot.asset.bundle", FriendlyName: "quest_steps.asset.bundle"},
@@ -34,7 +35,7 @@ func DownloadQuests(hashJson *ankabuffer.Manifest, bin int, version int, dir str
 
 		err := DownloadUnpackFiles("Quests", bin, hashJson, "data", fileNames, dir, outPath, true, indent, headless, false)
 		return err
-	} else {
+	default:
 		return errors.New("unsupported version: " + strconv.Itoa(version))
 	}
 }

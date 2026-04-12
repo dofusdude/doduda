@@ -10,7 +10,8 @@ import (
 func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir string, indent string, headless bool) error {
 	outPath := dir
 
-	if version == 3 {
+	switch version {
+	case 3:
 		fileNames := []HashFile{
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_itemsdataroot.asset.bundle", FriendlyName: "items.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_itemtypesdataroot.asset.bundle", FriendlyName: "item_types.asset.bundle"},
@@ -88,7 +89,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 		}
 
 		return nil
-	} else if version == 2 {
+	case 2:
 		fileNames := []HashFile{
 			{Filename: "data/common/Items.d2o", FriendlyName: "items.d2o"},
 			{Filename: "data/common/ItemTypes.d2o", FriendlyName: "item_types.d2o"},
@@ -121,7 +122,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 		err := DownloadUnpackFiles("Items", bin, hashJson, "main", fileNames, dir, outPath, true, indent, headless, false)
 
 		return err
-	} else {
+	default:
 		return errors.New("unsupported version: " + strconv.Itoa(version))
 	}
 }

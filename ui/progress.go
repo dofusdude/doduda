@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/bubbles/progress"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/progress"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 const (
@@ -77,7 +77,10 @@ func Progress(title string, length int, updates chan bool, padding int, clear bo
 	} else {
 
 		m := progressModel{
-			progress:   progress.New(progress.WithGradient("#3A1F38", "#F18749")),
+			progress: progress.New(progress.WithColors(
+				lipgloss.Color("#3A1F38"),
+				lipgloss.Color("#F18749"),
+			)),
 			length:     length,
 			current:    0,
 			padding:    padding,
@@ -140,10 +143,14 @@ func (m progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case tea.WindowSizeMsg:
-		m.progress.Width = msg.Width - m.padding*2 - 4
-		if m.progress.Width > maxWidth {
-			m.progress.Width = maxWidth
+		width := msg.Width - m.padding*2 - 4
+		if width > maxWidth {
+			width = maxWidth
 		}
+		if width < 0 {
+			width = 0
+		}
+		m.progress.SetWidth(width)
 		return m, nil
 
 	case incrMsg:
@@ -162,7 +169,7 @@ func (m progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// FrameMsg is sent when the progress bar wants to animate itself
 	case progress.FrameMsg:
 		progressModel, cmd := m.progress.Update(msg)
-		m.progress = progressModel.(progress.Model)
+		m.progress = progressModel
 		return m, cmd
 
 	default:
@@ -170,18 +177,18 @@ func (m progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m progressModel) View() string {
+func (m progressModel) View() tea.View {
 	if m.quitting {
 		if m.clear {
-			return ""
+			return tea.NewView("")
 		} else {
-			return dotStyle(m.title) + "\n"
+			return tea.NewView(dotStyle(m.title) + "\n")
 		}
 	}
 	pad := strings.Repeat(" ", m.padding)
-	return "\n" + m.titleStyle.Render(m.title) + " " +
+	return tea.NewView("\n" + m.titleStyle.Render(m.title) + " " +
 		pad + m.progress.View() + "\n\n" +
-		pad + HelpStyle("Press any key to quit")
+		pad + HelpStyle("Press any key to quit"))
 }
 
 func finalPause() tea.Cmd {

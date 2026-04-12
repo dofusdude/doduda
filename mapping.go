@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 	"github.com/dofusdude/doduda/ui"
 	mapping "github.com/dofusdude/dodumap"
 )
 
-func marshalSave(data interface{}, path string, indent string) {
+func marshalSave(data any, path string, indent string) {
 	out, err := os.Create(path)
 	if err != nil {
 		log.Fatal(err)
@@ -38,15 +38,15 @@ func detectRawDataMajorVersion(dir string) (int, error) {
 	if err != nil {
 		fmt.Print(err)
 	}
-	var areasJson interface{}
+	var areasJson any
 	err = json.Unmarshal(file, &areasJson)
 	if err != nil {
 		return 0, err
 	}
 
-	if _, ok := areasJson.(map[string]interface{}); ok {
+	if _, ok := areasJson.(map[string]any); ok {
 		return 3, nil
-	} else if _, ok := areasJson.([]interface{}); ok {
+	} else if _, ok := areasJson.([]any); ok {
 		return 2, nil
 	}
 
@@ -81,7 +81,8 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	}
 	updatesChan <- "Game data"
 
-	if majorVersion == 2 {
+	switch majorVersion {
+	case 2:
 		var gameData *mapping.JSONGameData
 		var languageData map[string]mapping.LangDict
 
@@ -140,7 +141,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		mappedRecipes := mapping.MapRecipes(gameData)
 		mappedRecipesPath := filepath.Join(dir, "MAPPED_RECIPES.json")
 		marshalSave(mappedRecipes, mappedRecipesPath, indent)
-	} else if majorVersion == 3 {
+	case 3:
 		var gameData *mapping.JSONGameDataUnity
 		var languageData map[string]mapping.LangDictUnity
 
@@ -200,7 +201,7 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		mappedRecipes := mapping.MapRecipesUnity(gameData)
 		mappedRecipesPath := filepath.Join(dir, "MAPPED_RECIPES.json")
 		marshalSave(mappedRecipes, mappedRecipesPath, indent)
-	} else {
+	default:
 		log.Fatal("Unsupported major version of raw data")
 	}
 

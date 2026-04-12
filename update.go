@@ -21,7 +21,7 @@ import (
 
 	"slices"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -44,11 +44,7 @@ func PartitionSlice[T any](items []T, parts int) (chunks [][]T) {
 	chunkSize := (len(items) + parts - 1) / parts
 
 	for i := 0; i < len(items); i += chunkSize {
-		end := i + chunkSize
-
-		if end > len(items) {
-			end = len(items)
-		}
+		end := min(i+chunkSize, len(items))
 
 		divided = append(divided, items[i:end])
 	}
@@ -153,29 +149,29 @@ func GetLatestLauncherVersion(release string) (string, error) {
 		return "", fmt.Errorf("failed to read cytrus.json response: %w", err)
 	}
 
-	var versionJson map[string]interface{}
+	var versionJson map[string]any
 	err = json.Unmarshal(versionBody, &versionJson)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse cytrus.json: %w", err)
 	}
 
 	// Safe type assertions with error checking
-	games, ok := versionJson["games"].(map[string]interface{})
+	games, ok := versionJson["games"].(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("cytrus.json: 'games' field not found or invalid type")
 	}
 
-	dofus, ok := games["dofus"].(map[string]interface{})
+	dofus, ok := games["dofus"].(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("cytrus.json: 'games.dofus' field not found or invalid type")
 	}
 
-	platforms, ok := dofus["platforms"].(map[string]interface{})
+	platforms, ok := dofus["platforms"].(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("cytrus.json: 'platforms' field not found or invalid type")
 	}
 
-	windows, ok := platforms["windows"].(map[string]interface{})
+	windows, ok := platforms["windows"].(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("cytrus.json: 'windows' platform not found or invalid type")
 	}
@@ -248,12 +244,7 @@ func contains(arr []string, str string) bool {
 	if arr == nil {
 		return false
 	}
-	for _, s := range arr {
-		if s == str {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(arr, str)
 }
 
 // ported from https://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable-string
@@ -795,7 +786,7 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 		if err != nil {
 			log.Fatal(err)
 		}
-		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
+		marshalledBytes = bytes.ReplaceAll(marshalledBytes, []byte("NaN"), []byte("null"))
 
 		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
 		if err != nil {
@@ -826,7 +817,7 @@ func Unpack(file string, dir string, destDir string, category string, indent str
 		if err != nil {
 			log.Fatal(err)
 		}
-		marshalledBytes = bytes.Replace(marshalledBytes, []byte("NaN"), []byte("null"), -1)
+		marshalledBytes = bytes.ReplaceAll(marshalledBytes, []byte("NaN"), []byte("null"))
 
 		err = os.WriteFile(absOutPath, marshalledBytes, os.ModePerm)
 		if err != nil {
@@ -911,8 +902,8 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 	var filesToDownload []ankabuffer.File
 	toDownloadFiltered := []HashFile{}
 	for _, file := range toDownload {
-		if strings.HasPrefix(file.Filename, "REGEX:") {
-			regex := strings.TrimPrefix(file.Filename, "REGEX:")
+		if after, ok := strings.CutPrefix(file.Filename, "REGEX:"); ok {
+			regex := after
 			compiled := regexp.MustCompile(regex)
 			for key := range manifest.Fragments[fragment].Files {
 				if compiled.MatchString(key) {
@@ -1039,7 +1030,7 @@ func DownloadUnpackFiles(title string, bin int, manifest *ankabuffer.Manifest, f
 				defer wg.Done()
 				var fileData []byte
 
-				if file.Chunks == nil || len(file.Chunks) == 0 { // file is not chunked
+				if len(file.Chunks) == 0 { // file is not chunked
 					for _, bundle := range bundlesBuffer {
 						for _, chunk := range bundlesMap[bundle.BundleHash].Chunks {
 							if chunk.Hash == file.Hash {
