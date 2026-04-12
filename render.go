@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/dofusdude/doduda/ui"

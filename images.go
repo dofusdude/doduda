@@ -7,11 +7,12 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/ui"
@@ -75,16 +76,34 @@ func unpackD2pFolder(title string, inPath string, outPath string, headless bool)
 }
 
 func removeNumberSuffix(path string, f os.FileInfo, ending string) string {
-	var pathNoNum string
-	if strings.Contains(f.Name(), "_#") {
-		splits := strings.Split(f.Name(), "_")
-		joined_except_last := strings.Join(splits[:len(splits)-1], "_")
-		pathNoNum = filepath.Join(filepath.Dir(path), joined_except_last+ending)
-	} else {
-		pathNoNum = path
+	fileBase := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
+	cleanedBase := fileBase
+	if suffixStart := strings.LastIndex(fileBase, "_#"); suffixStart != -1 {
+		base := fileBase[:suffixStart]
+		suffix := fileBase[suffixStart+2:]
+
+		if isOnlyDigits(base) && isOnlyDigits(suffix) && len(suffix) == 1 {
+			cleanedBase = base + suffix
+		} else {
+			cleanedBase = base
+		}
 	}
 
-	return pathNoNum
+	return filepath.Join(filepath.Dir(path), cleanedBase+ending)
+}
+
+func isOnlyDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+
+	return true
 }
 
 func cleanImages(dir string, resolution *int) error {
@@ -232,6 +251,126 @@ func rename_or_rmfirst(from string, to string) error {
 	return nil
 }
 
+func upscalePngNearest(srcPath string, dstPath string, dstWidth int, dstHeight int) error {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	srcImg, err := png.Decode(srcFile)
+	if err != nil {
+		return err
+	}
+
+	srcBounds := srcImg.Bounds()
+	srcWidth := srcBounds.Dx()
+	srcHeight := srcBounds.Dy()
+	if srcWidth == 0 || srcHeight == 0 {
+		return errors.New("source image has invalid size")
+	}
+
+	dstImg := image.NewRGBA(image.Rect(0, 0, dstWidth, dstHeight))
+	for y := range dstHeight {
+		srcY := srcBounds.Min.Y + (y*srcHeight)/dstHeight
+		for x := range dstWidth {
+			srcX := srcBounds.Min.X + (x*srcWidth)/dstWidth
+			dstImg.Set(x, y, srcImg.At(srcX, srcY))
+		}
+	}
+
+	if _, err := os.Stat(filepath.Dir(dstPath)); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	dstFile, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	if err := png.Encode(dstFile, dstImg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fillMissingHighResFromTruncatedIDs(outPath string, resolutionMap map[string]*int, ressubdirs []string) error {
+	type resEntry struct {
+		name string
+		size int
+	}
+
+	entries := make([]resEntry, 0, len(resolutionMap))
+	for name, res := range resolutionMap {
+		if res == nil {
+			continue
+		}
+		entries = append(entries, resEntry{name: name, size: *res})
+	}
+
+	if len(entries) < 2 {
+		return nil
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].size < entries[j].size
+	})
+
+	lowRes := entries[0]
+	highRes := entries[len(entries)-1]
+
+	lowSuffix := fmt.Sprintf("-%d.png", lowRes.size)
+	highSuffix := fmt.Sprintf("-%d.png", highRes.size)
+
+	for _, ressubdir := range ressubdirs {
+		lowDir := filepath.Join(outPath, lowRes.name)
+		highDir := filepath.Join(outPath, highRes.name)
+		if ressubdir != "" {
+			lowDir = filepath.Join(outPath, ressubdir, lowRes.name)
+			highDir = filepath.Join(outPath, ressubdir, highRes.name)
+		}
+
+		lowFiles, err := os.ReadDir(lowDir)
+		if err != nil {
+			continue
+		}
+
+		for _, lowFile := range lowFiles {
+			if lowFile.IsDir() || !strings.HasSuffix(lowFile.Name(), lowSuffix) {
+				continue
+			}
+
+			id := strings.TrimSuffix(lowFile.Name(), lowSuffix)
+			if !isOnlyDigits(id) || len(id) < 2 {
+				continue
+			}
+
+			expectedHighName := id + highSuffix
+			expectedHighPath := filepath.Join(highDir, expectedHighName)
+			if _, err := os.Stat(expectedHighPath); err == nil {
+				continue
+			}
+
+			truncatedID := id[:len(id)-1]
+			truncatedHighPath := filepath.Join(highDir, truncatedID+highSuffix)
+			if _, err := os.Stat(truncatedHighPath); err != nil {
+				continue
+			}
+
+			lowPath := filepath.Join(lowDir, lowFile.Name())
+			if err := upscalePngNearest(lowPath, expectedHighPath, highRes.size, highRes.size); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bin int, hashJson *ankabuffer.Manifest, dir string, outPath string, fileNames []HashFile, semaphore chan struct{}, feedbacks chan string, innerTopicPlural string, resolutionMap map[string]*int, ressubdirs ...string) {
 	err := DownloadUnpackFiles(topic+" 🖼️", bin, hashJson, "picto", fileNames, dir, outPath, true, "", true, true)
 	if err != nil {
@@ -271,7 +410,7 @@ func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bi
 					cleanPath = filepath.Join(outPath, ressubdir, res)
 				}
 
-				if cleanImages(cleanPath, resolution) != nil {
+				if err := cleanImages(cleanPath, resolution); err != nil {
 					errorChan <- err
 				}
 			}()
@@ -279,6 +418,9 @@ func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bi
 	}
 
 	innerWg.Wait()
+	if err := fillMissingHighResFromTruncatedIDs(outPath, resolutionMap, ressubdirs); err != nil {
+		errorChan <- err
+	}
 	err = os.RemoveAll(filepath.Join(outPath, "Assets"))
 	if err != nil {
 		errorChan <- err
@@ -287,7 +429,8 @@ func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bi
 }
 
 func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurrentDownloads int, version int, dir string, ignore []string, headless bool) error {
-	if version == 2 {
+	switch version {
+	case 2:
 		fileNames := []HashFile{
 			{Filename: "content/gfx/items/bitmap0.d2p", FriendlyName: "bitmaps_0.d2p"},
 			{Filename: "content/gfx/items/bitmap0_1.d2p", FriendlyName: "bitmaps_1.d2p"},
@@ -322,7 +465,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 		}
 
 		return nil
-	} else if version == 3 {
+	case 3:
 
 		// -- Worldmaps --
 		if !ignoresRegex(ignore, "images-worldmaps") {
@@ -799,7 +942,7 @@ func DownloadImagesLauncher(hashJson *ankabuffer.Manifest, bin int, maxConcurren
 		wg.Wait()
 
 		return nil
-	} else {
+	default:
 		return errors.New("unsupported version: " + strconv.Itoa(version))
 	}
 }
