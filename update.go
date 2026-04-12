@@ -2,14 +2,12 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -22,9 +20,6 @@ import (
 	"slices"
 
 	"charm.land/log/v2"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
 	"github.com/dofusdude/ankabuffer"
 	"github.com/dofusdude/doduda/ui"
 	"github.com/dofusdude/doduda/unpack"
@@ -438,7 +433,11 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 		CreateDataDirectoryStructure(dir)
 
 		if rawDofusMajorVersion == 3 {
-			err := PullImages([]string{"stelzo/doduda-umbu:" + ARCH, "stelzo/assetstudio-cli:" + ARCH}, false, headless)
+			unityBackend, err := CurrentUnityUnpackBackend()
+			if err != nil {
+				return err
+			}
+			err = unityBackend.Prepare(false, headless)
 			if err != nil {
 				return err
 			}
@@ -527,53 +526,15 @@ func UnpackUnityBundle(category string, inputPath string, outputPath string, mut
 		return fmt.Errorf("bundle %s does not exist", inputPath)
 	}
 
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	unityBackend, err := CurrentUnityUnpackBackend()
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
 
 	outputTrimmed := strings.TrimSuffix(outputPath, ".asset.json")
 	outputFileName := outputTrimmed + ".json"
 
-	inputRawFileName := filepath.Base(inputPath)
-	outputRawFileName := filepath.Base(outputFileName)
-
-	inputDir := filepath.Dir(inputPath)
-
-	cmd := []string{"dotnet", "out/unity-bundle-unwrap.dll", path.Join("/app", "data", inputRawFileName), path.Join("/app", "data", outputRawFileName)}
-
-	ctx := context.Background()
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "stelzo/doduda-umbu:" + ARCH,
-		Cmd:   cmd,
-		Volumes: map[string]struct{}{
-			"/app/data": {},
-		},
-	}, &container.HostConfig{
-		Binds: []string{
-			fmt.Sprintf("%s:/app/data", inputDir),
-		},
-		AutoRemove: true,
-	}, nil, nil, "")
-	if err != nil {
-		return err
-	}
-
-	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return err
-	}
-
-	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return err
-		}
-	case <-statusCh:
-	}
-
-	return nil
+	return unityBackend.UnpackBundle(inputPath, outputFileName)
 }
 
 func UnpackUnityI18n(category string, inputPath string, outputPath string, muteSpinner bool, headless bool) error {
@@ -589,153 +550,15 @@ func UnpackUnityI18n(category string, inputPath string, outputPath string, muteS
 		return fmt.Errorf("file %s does not exist", inputPath)
 	}
 
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
-
-	inputRawFileName := filepath.Base(inputPath)
-	outputRawFileName := filepath.Base(outputPath)
-
-	inputDir := filepath.Dir(inputPath)
-
-	cmd := []string{"dotnet", "out/unity-bundle-unwrap.dll", path.Join("/app", "data", inputRawFileName), path.Join("/app", "data", outputRawFileName)}
-
-	ctx := context.Background()
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "stelzo/doduda-umbu:" + ARCH,
-		Cmd:   cmd,
-		Volumes: map[string]struct{}{
-			"/app/data": {},
-		},
-	}, &container.HostConfig{
-		Binds: []string{
-			fmt.Sprintf("%s:/app/data", inputDir),
-		},
-		AutoRemove: true,
-	}, nil, nil, "")
-	if err != nil {
-		return err
-	}
-
-	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return err
-	}
-
-	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return err
-		}
-	case <-statusCh:
-	}
-
-	return nil
-}
-
-func PullImages(images []string, muteSpinner bool, headless bool) error {
-	feedbacks := make(chan string)
-
-	var feedbackWg sync.WaitGroup
-	if !muteSpinner {
-		feedbackWg.Add(1)
-		go func() {
-			defer feedbackWg.Done()
-			ui.Spinner("Docker", feedbacks, false, headless)
-		}()
-	}
-
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
-
-	for _, imageRef := range images {
-		ctx := context.Background()
-		feedbacks <- "⬇️ " + imageRef
-		imageHandle, err := cli.ImagePull(ctx, imageRef, image.PullOptions{})
-		if err != nil {
-			return err
-		}
-		defer imageHandle.Close()
-
-		_, err = io.ReadAll(imageHandle)
-		if err != nil {
-			log.Fatalf("Error finishing image handler: %v", err)
-		}
-	}
-
-	close(feedbacks)
-	feedbackWg.Wait()
-
-	return nil
+	return unpackUnityI18nNative(inputPath, outputPath)
 }
 
 func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	unityBackend, err := CurrentUnityUnpackBackend()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer cli.Close()
-
-	imageName := "stelzo/assetstudio-cli:" + ARCH
-
-	ctx := context.Background()
-	bundles, err := os.ReadDir(inputDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, bundle := range bundles {
-		if bundle.IsDir() || !strings.HasSuffix(bundle.Name(), ".imagebundle") {
-			continue
-		}
-
-		absInputPath := filepath.Join(inputDir, bundle.Name())
-
-		cmd := []string{"./data", "--unity-version", "6000.0.41.58439"}
-
-		uid := strconv.Itoa(os.Getuid())
-		gid := strconv.Itoa(os.Getgid())
-		user := uid + ":" + gid
-
-		resp, err := cli.ContainerCreate(ctx, &container.Config{
-			Image: imageName,
-			Cmd:   cmd,
-			User:  user,
-			Volumes: map[string]struct{}{
-				"/app/AssetStudio/data":     {},
-				"/app/AssetStudio/ASExport": {},
-			},
-		}, &container.HostConfig{
-			Binds: []string{
-				fmt.Sprintf("%s:/app/AssetStudio/data", absInputPath),
-				fmt.Sprintf("%s:/app/AssetStudio/ASExport", outputDir)},
-			AutoRemove: true,
-		}, nil, nil, "")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-			return err
-		}
-
-		statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-		select {
-		case err := <-errCh:
-			if err != nil {
-				return err
-			}
-		case <-statusCh:
-		}
-
-	}
-
-	return nil
+	return unityBackend.UnpackImages(inputDir, outputDir)
 }
 
 func Unpack(file string, dir string, destDir string, category string, indent string, muteSpinner bool, headless bool) {

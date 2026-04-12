@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
 	"charm.land/log/v2"
@@ -51,6 +55,122 @@ func detectRawDataMajorVersion(dir string) (int, error) {
 	}
 
 	return 0, errors.New("Could not detect major version of raw data")
+}
+
+func normalizeUnityRIDTypes(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		if strings.HasPrefix(entry.Name(), "MAPPED_") {
+			continue
+		}
+
+		filePath := filepath.Join(dir, entry.Name())
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+
+		decoder := json.NewDecoder(bytes.NewReader(content))
+		decoder.UseNumber()
+
+		var data any
+		if err := decoder.Decode(&data); err != nil {
+			return fmt.Errorf("decode %s: %w", entry.Name(), err)
+		}
+
+		if !normalizeRIDValue(data) {
+			continue
+		}
+
+		rewritten, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("marshal %s: %w", entry.Name(), err)
+		}
+		if err := os.WriteFile(filePath, rewritten, os.ModePerm); err != nil {
+			return fmt.Errorf("write %s: %w", entry.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+func normalizeRIDValue(value any) bool {
+	switch v := value.(type) {
+	case map[string]any:
+		changed := false
+		for key, child := range v {
+			if key == "rid" {
+				if normalized, ok := normalizeRIDScalar(child); ok {
+					v[key] = normalized
+					changed = true
+					child = normalized
+				}
+			}
+			if normalizeRIDValue(child) {
+				changed = true
+			}
+		}
+		return changed
+	case []any:
+		changed := false
+		for i := range v {
+			if normalizeRIDValue(v[i]) {
+				changed = true
+			}
+		}
+		return changed
+	default:
+		return false
+	}
+}
+
+func normalizeRIDScalar(value any) (string, bool) {
+	switch rid := value.(type) {
+	case string:
+		return "", false
+	case json.Number:
+		return rid.String(), true
+	case int:
+		return strconv.FormatInt(int64(rid), 10), true
+	case int8:
+		return strconv.FormatInt(int64(rid), 10), true
+	case int16:
+		return strconv.FormatInt(int64(rid), 10), true
+	case int32:
+		return strconv.FormatInt(int64(rid), 10), true
+	case int64:
+		return strconv.FormatInt(rid, 10), true
+	case uint:
+		return strconv.FormatUint(uint64(rid), 10), true
+	case uint8:
+		return strconv.FormatUint(uint64(rid), 10), true
+	case uint16:
+		return strconv.FormatUint(uint64(rid), 10), true
+	case uint32:
+		return strconv.FormatUint(uint64(rid), 10), true
+	case uint64:
+		return strconv.FormatUint(rid, 10), true
+	case float32:
+		floatValue := float64(rid)
+		if math.Trunc(floatValue) == floatValue {
+			return strconv.FormatInt(int64(floatValue), 10), true
+		}
+		return strconv.FormatFloat(floatValue, 'f', -1, 32), true
+	case float64:
+		if math.Trunc(rid) == rid {
+			return strconv.FormatInt(int64(rid), 10), true
+		}
+		return strconv.FormatFloat(rid, 'f', -1, 64), true
+	default:
+		return "", false
+	}
 }
 
 func Map(dir string, indent string, persistenceDir string, release string, headless bool) {
@@ -144,6 +264,10 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 	case 3:
 		var gameData *mapping.JSONGameDataUnity
 		var languageData map[string]mapping.LangDictUnity
+
+		if err := normalizeUnityRIDTypes(dir); err != nil {
+			log.Fatal(err)
+		}
 
 		gameData = mapping.ParseRawDataUnity(dir)
 
