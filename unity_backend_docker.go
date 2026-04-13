@@ -166,11 +166,14 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 		if err != nil {
 			return err
 		}
-		defer imageHandle.Close()
 
 		_, err = io.ReadAll(imageHandle)
+		closeErr := imageHandle.Close()
 		if err != nil {
 			log.Fatalf("Error finishing image handler: %v", err)
+		}
+		if closeErr != nil {
+			return closeErr
 		}
 	}
 
