@@ -16,60 +16,16 @@ curl -s https://get.dofusdu.de/doduda | sh
 doduda && doduda map
 ```
 
-## Features
-
 See `doduda --help` for all parameters.
 
-### Load
+Dofus 3 unpacking just works without installing any additional software.
 
-Download the latest Dofus version. You can change the target folder with `--output`.
+There may be cases though where you need [Docker](https://docs.docker.com/get-docker/) to be installed and running:
 
-<img src="https://vhs.charm.sh/vhs-15sHEeT47mgiZ7vrgnenB2.gif" alt="load example" width="600">
-
-You can also download the complete game to get a playable version without unpacking the files using `doduda --full`.
-If you want a different platform version than Windows, you can specify the it with the `--platform` parameter.
-
-### Map
-
-Make the cryptic data easier to use in apps.
-
-<img src="https://vhs.charm.sh/vhs-3YcvO6NALEaRFoNPu9Jhe2.gif" alt="map example" width="600">
-
-The command assumes that all categories (except images) are already downloaded.
-
-### Watchdog
-
-Listen for new Dofus versions and react to their release.
-
-<img src="https://vhs.charm.sh/vhs-g7BGgJ5f4iUhuzRhoYzzR.gif" alt="watchdog example" width="600">
-
-You can use that for getting anything that supports webhooks to react to Dofus version updates. Some ideas are:
-
-- [Discord Channels](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
-- [ntfy.sh](https://ntfy.sh) (Push notifications to your phone)
-
-### Render
-
-Generate pre-rendered, high resolution `.png` images from the vector files.
-
-<img src="https://vhs.charm.sh/vhs-H3yfHga5lcnzj9UhLyP5C.gif" alt="render example" width="600">
-
-## Installation
-
-```sh
-curl -s https://get.dofusdu.de/doduda | sh
-```
-
-There is only one dependency: [Docker](https://docs.docker.com/get-docker/).
-
-You need to have it installed when you:
-
-- want to unpack the Dofus 3 data files.
+- want to force the legacy Dofus 3 Docker backend (`export DODUDA_UNITY_BACKEND=docker`) because of some missed bugs in the native unpacking backend.
 - want to use the `render` command to generate images for Dofus 2.
 
-You don't need it when you only want to use the `map` command or download the entire game (`--full`). The script above will crash if Docker is not installed since Dofus 3 is the default game at the moment.
-
-If you have problems with Docker, like a missing socket, the solution is often to find your `docker.sock` path and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>` before running `doduda`.
+If you use the Docker backend and have Docker socket problems, the solution is often to find your `docker.sock` path and link it to the missing path or export your path as `DOCKER_HOST` environment variable `export DOCKER_HOST=unix://<your docker.sock path>` before running `doduda`.
 
 ### GitHub Releases
 

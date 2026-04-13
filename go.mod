@@ -11,9 +11,13 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dofusdude/ankabuffer v0.1.0
 	github.com/dofusdude/dodumap v0.7.0
+	github.com/kvarenzn/ssm v0.3.2
+	github.com/pierrec/lz4/v4 v4.1.25
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	github.com/ulikunitz/xz v0.5.15
 	github.com/xhhuango/json v1.19.0
+	github.com/xypwn/filediver v0.7.22
 )
 
 require (
@@ -66,6 +70,7 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0 // indirect
