@@ -98,19 +98,22 @@ func (dockerUnityUnpackBackend) UnpackImages(inputDir string, outputDir string) 
 
 		absInputPath := filepath.Join(inputDir, bundle.Name())
 		cmd := []string{"./data", "--unity-version", "6000.0.41.58439"}
-		uid := strconv.Itoa(os.Getuid())
-		gid := strconv.Itoa(os.Getgid())
-		user := uid + ":" + gid
+		uid := os.Getuid()
+		gid := os.Getgid()
 
-		resp, err := cli.ContainerCreate(ctx, &container.Config{
+		containerConfig := &container.Config{
 			Image: imageName,
 			Cmd:   cmd,
-			User:  user,
 			Volumes: map[string]struct{}{
 				"/app/AssetStudio/data":     {},
 				"/app/AssetStudio/ASExport": {},
 			},
-		}, &container.HostConfig{
+		}
+		if uid >= 0 && gid >= 0 {
+			containerConfig.User = strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
+		}
+
+		resp, err := cli.ContainerCreate(ctx, containerConfig, &container.HostConfig{
 			Binds: []string{
 				fmt.Sprintf("%s:/app/AssetStudio/data", absInputPath),
 				fmt.Sprintf("%s:/app/AssetStudio/ASExport", outputDir),
