@@ -1,20 +1,21 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
 func TestUnpackUnityI18NNative(t *testing.T) {
-	inputPath := filepath.Join("unpack", "umbu", "unity-bundle-unwrap", "fr.bin")
-	if _, err := os.Stat(inputPath); err != nil {
-		t.Fatalf("missing test fixture %s: %v", inputPath, err)
+	tmpDir := t.TempDir()
+	inputPath := filepath.Join(tmpDir, "fr.bin")
+	if err := os.WriteFile(inputPath, testUnityI18NNativeFixture(), 0o600); err != nil {
+		t.Fatalf("failed writing test fixture: %v", err)
 	}
 
-	outputPath := filepath.Join(t.TempDir(), "fr.json")
+	outputPath := filepath.Join(tmpDir, "fr.json")
 	if err := unpackUnityI18nNative(inputPath, outputPath); err != nil {
 		t.Fatalf("unpackUnityI18nNative returned error: %v", err)
 	}
@@ -37,7 +38,33 @@ func TestUnpackUnityI18NNative(t *testing.T) {
 	if !ok {
 		t.Fatal("missing known key 1")
 	}
-	if !strings.Contains(firstEntry, "Commerce") {
+	if firstEntry != "Commerce" {
 		t.Fatalf("unexpected value for key 1: %q", firstEntry)
 	}
+}
+
+func testUnityI18NNativeFixture() []byte {
+	data := make([]byte, 0, 24)
+	buf := make([]byte, 4)
+
+	// Version byte + 2 reserved bytes.
+	data = append(data, 0, 0, 0)
+
+	// Integer table count.
+	binary.LittleEndian.PutUint32(buf, 1)
+	data = append(data, buf...)
+
+	// Entry key.
+	binary.LittleEndian.PutUint32(buf, 1)
+	data = append(data, buf...)
+
+	// Entry string offset (version+reserved+count+entry table = 15).
+	binary.LittleEndian.PutUint32(buf, 15)
+	data = append(data, buf...)
+
+	// String data.
+	data = append(data, 8)
+	data = append(data, []byte("Commerce")...)
+
+	return data
 }
