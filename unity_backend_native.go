@@ -15,3 +15,7 @@ func (nativeUnityUnpackBackend) UnpackBundle(inputPath string, outputPath string
 func (nativeUnityUnpackBackend) UnpackImages(inputDir string, outputDir string) error {
 	return unpackUnityImagesNative(inputDir, outputDir)
 }
+
+func (nativeUnityUnpackBackend) UnpackI18n(inputPath string, outputPath string) error {
+	return unpackUnityI18nNative(inputPath, outputPath)
+}

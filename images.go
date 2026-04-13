@@ -404,7 +404,7 @@ func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bi
 						errorChan <- err
 					}
 				} else if errors.Is(err, os.ErrNotExist) {
-					if _, toErr := os.Stat(toPath); toErr != nil {
+					if _, toErr := os.Stat(toPath); errors.Is(toErr, os.ErrNotExist) {
 						altNativePath := filepath.Join(outPath, res)
 						altNativeSubdirPath := filepath.Join(outPath, res, ressubdir)
 						if _, altErr := os.Stat(altNativeSubdirPath); altErr == nil {
@@ -418,6 +418,8 @@ func download_unpack_clean_dedup_multires(errorChan chan error, topic string, bi
 						} else {
 							errorChan <- fmt.Errorf("missing extracted image directory %s (expected %s for native backend fallback)", from, toPath)
 						}
+					} else if toErr != nil {
+						errorChan <- toErr
 					}
 				} else {
 					errorChan <- err

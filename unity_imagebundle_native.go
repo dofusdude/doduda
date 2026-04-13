@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
 	"image/png"
 	"math"
 	"os"
@@ -325,49 +324,6 @@ func unityReadTextureData(texture *uni.Texture2D) ([]byte, error) {
 	}
 	out := reader.Bytes(int(size))
 	return append([]byte(nil), out...), nil
-}
-
-func unityCropSpriteImage(src image.Image, sprite *uni.Sprite) image.Image {
-	if src == nil || sprite == nil || sprite.RenderData == nil || sprite.RenderData.TextureRect == nil {
-		return src
-	}
-
-	rect := sprite.RenderData.TextureRect
-	rx := int(math.Round(float64(rect.X)))
-	ry := int(math.Round(float64(rect.Y)))
-	rw := int(math.Round(float64(rect.Width)))
-	rh := int(math.Round(float64(rect.Height)))
-	if rw <= 0 || rh <= 0 {
-		return src
-	}
-
-	bounds := src.Bounds()
-	if rw == bounds.Dx() && rh == bounds.Dy() && rx == 0 && ry == 0 {
-		return src
-	}
-
-	candidates := []image.Rectangle{
-		image.Rect(rx, ry, rx+rw, ry+rh),
-		image.Rect(rx, bounds.Dy()-ry-rh, rx+rw, bounds.Dy()-ry),
-	}
-
-	var cropRect image.Rectangle
-	found := false
-	for _, candidate := range candidates {
-		if candidate.Min.X < 0 || candidate.Min.Y < 0 || candidate.Max.X > bounds.Dx() || candidate.Max.Y > bounds.Dy() {
-			continue
-		}
-		cropRect = candidate
-		found = true
-		break
-	}
-	if !found {
-		return src
-	}
-
-	dst := image.NewNRGBA(image.Rect(0, 0, rw, rh))
-	draw.Draw(dst, dst.Bounds(), src, cropRect.Min, draw.Src)
-	return dst
 }
 
 func unityImageResolutionSubdir(bundleName string) string {

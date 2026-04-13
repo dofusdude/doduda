@@ -16,6 +16,7 @@ type UnityUnpackBackend interface {
 	Prepare(muteSpinner bool, headless bool) error
 	UnpackBundle(inputPath string, outputPath string) error
 	UnpackImages(inputDir string, outputDir string) error
+	UnpackI18n(inputPath string, outputPath string) error
 }
 
 func CurrentUnityUnpackBackend() (UnityUnpackBackend, error) {

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"charm.land/log/v2"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -141,6 +140,10 @@ func (dockerUnityUnpackBackend) UnpackImages(inputDir string, outputDir string) 
 	return nil
 }
 
+func (dockerUnityUnpackBackend) UnpackI18n(inputPath string, outputPath string) error {
+	return unpackUnityI18nNative(inputPath, outputPath)
+}
+
 func PullImages(images []string, muteSpinner bool, headless bool) error {
 	feedbacks := make(chan string)
 
@@ -161,7 +164,9 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 
 	for _, imageRef := range images {
 		ctx := context.Background()
-		feedbacks <- "⬇️ " + imageRef
+		if !muteSpinner {
+			feedbacks <- "⬇️ " + imageRef
+		}
 		imageHandle, err := cli.ImagePull(ctx, imageRef, image.PullOptions{})
 		if err != nil {
 			return err
@@ -170,7 +175,7 @@ func PullImages(images []string, muteSpinner bool, headless bool) error {
 		_, err = io.ReadAll(imageHandle)
 		closeErr := imageHandle.Close()
 		if err != nil {
-			log.Fatalf("Error finishing image handler: %v", err)
+			return fmt.Errorf("error finishing image handler: %w", err)
 		}
 		if closeErr != nil {
 			return closeErr

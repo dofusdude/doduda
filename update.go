@@ -550,7 +550,11 @@ func UnpackUnityI18n(category string, inputPath string, outputPath string, muteS
 		return fmt.Errorf("file %s does not exist", inputPath)
 	}
 
-	return unpackUnityI18nNative(inputPath, outputPath)
+	unityBackend, err := CurrentUnityUnpackBackend()
+	if err != nil {
+		return err
+	}
+	return unityBackend.UnpackI18n(inputPath, outputPath)
 }
 
 func UnpackUnityImages(inputDir string, outputDir string, muteSpinner bool, headless bool) error {

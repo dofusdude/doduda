@@ -57,7 +57,10 @@ func detectRawDataMajorVersion(dir string) (int, error) {
 	return 0, errors.New("Could not detect major version of raw data")
 }
 
-func normalizeUnityRIDTypes(dir string) error {
+// normalizeUnityRIDTypes copies JSON files from dir to dstDir, rewriting any
+// "rid" numeric values to strings required by the mapping package. The source
+// files in dir are left untouched.
+func normalizeUnityRIDTypes(dir string, dstDir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -85,15 +88,18 @@ func normalizeUnityRIDTypes(dir string) error {
 			return fmt.Errorf("decode %s: %w", entry.Name(), err)
 		}
 
-		if !normalizeRIDValue(data) {
-			continue
+		var output []byte
+		if normalizeRIDValue(data) {
+			output, err = json.Marshal(data)
+			if err != nil {
+				return fmt.Errorf("marshal %s: %w", entry.Name(), err)
+			}
+		} else {
+			output = content
 		}
 
-		rewritten, err := json.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("marshal %s: %w", entry.Name(), err)
-		}
-		if err := os.WriteFile(filePath, rewritten, os.ModePerm); err != nil {
+		dstPath := filepath.Join(dstDir, entry.Name())
+		if err := os.WriteFile(dstPath, output, os.ModePerm); err != nil {
 			return fmt.Errorf("write %s: %w", entry.Name(), err)
 		}
 	}
@@ -265,18 +271,23 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 		var gameData *mapping.JSONGameDataUnity
 		var languageData map[string]mapping.LangDictUnity
 
-		if err := normalizeUnityRIDTypes(dir); err != nil {
+		tmpDir, err := os.MkdirTemp("", "doduda-unity-*")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := normalizeUnityRIDTypes(dir, tmpDir); err != nil {
 			log.Fatal(err)
 		}
 
-		gameData = mapping.ParseRawDataUnity(dir)
+		gameData = mapping.ParseRawDataUnity(tmpDir)
 
 		if isChannelClosed(updatesChan) {
 			os.Exit(1)
 		}
 		updatesChan <- "Languages"
-		languageData = mapping.ParseRawLanguagesUnity(dir)
-
+		languageData = mapping.ParseRawLanguagesUnity(tmpDir)
 		if isChannelClosed(updatesChan) {
 			os.Exit(1)
 		}
