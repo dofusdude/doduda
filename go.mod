@@ -7,7 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.2
 	charm.land/lipgloss/v2 v2.0.2
 	charm.land/log/v2 v2.0.0
-	github.com/dlclark/regexp2 v1.11.5
+	github.com/dlclark/regexp2 v1.12.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dofusdude/ankabuffer v0.1.0
 	github.com/dofusdude/dodumap v0.7.0
