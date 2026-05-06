@@ -18,6 +18,9 @@ doduda && doduda map
 
 See `doduda --help` for all parameters.
 
+> [!TIP]
+> You don't need to run the tool yourself for most cases - just look at the automatically updated outputs of all Dofus 3 versions [here](https://github.com/dofusdude/dofus3-main/releases).
+
 Dofus 3 unpacking just works without installing any additional software.
 
 There may be cases though where you need [Docker](https://docs.docker.com/get-docker/) to be installed and running:
@@ -38,14 +41,6 @@ You need to have `$GOPATH/bin` in your `$PATH` for this to work, so `export PATH
 ```bash
 go install github.com/dofusdude/doduda@latest
 ```
-
-## The dofusdude auto-update cycle
-
-This tool is the first step in a pipeline that updates the data on [GitHub](https://github.com/dofusdude/dofus3-main) when a new Dofus version is released.
-
-1. Two watchdogs (`doduda listen`) listen for new Dofus versions. One for main and one for beta. When something releases, the watchdog calls the GitHub API to start a workflow that uses `doduda` to download and parse the update to check for new elements and item_types. They hold global IDs for the API, so they must be consistent with each update.
-2. At the end of the `doduda` workflow, it triggers the corresponding data repository to do a release, which then downloads the latest `doduda` binary (because it is a different workflow) and runs it to produce the final dataset. The data repository opens a release and uploads the files.
-3. After a release, `doduapi` needs to know that a new update is available. The data repository workflow calls the update endpoint. The API then fetches the latest version from GitHub, indexes, starts the image upscaler (if necessary) and does a atomic switch of the database when ready.
 
 ## Known Problems
 
