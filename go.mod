@@ -17,7 +17,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/ulikunitz/xz v0.5.15
 	github.com/xhhuango/json v1.19.0
-	github.com/xypwn/filediver v0.7.25
+	github.com/xypwn/filediver v0.7.26
 )
 
 require (
