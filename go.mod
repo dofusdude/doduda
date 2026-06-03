@@ -12,7 +12,7 @@ require (
 	github.com/dofusdude/ankabuffer v0.1.0
 	github.com/dofusdude/dodumap v0.7.0
 	github.com/kvarenzn/ssm v0.3.2
-	github.com/pierrec/lz4/v4 v4.1.26
+	github.com/pierrec/lz4/v4 v4.1.27
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/ulikunitz/xz v0.5.15
