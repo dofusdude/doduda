@@ -275,5 +275,10 @@
     "Unlocks a pose",
     "Fight: (level)",
     ": - Minimum Range",
-    "An item's value"
+    "An item's value",
+    "Neutral heals (Active)",
+    ": + cast per target",
+    ": + cast per turn",
+    "Changes the strike element to at a rate of%",
+    "Resets the effects of a weapon whose level is equal to or less than"
 ]
