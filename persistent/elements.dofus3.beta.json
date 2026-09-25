@@ -280,5 +280,6 @@
     ": + cast per target",
     ": + cast per turn",
     "Changes the strike element to at a rate of%",
-    "Resets the effects of a weapon whose level is equal to or less than"
+    "Resets the effects of a weapon whose level is equal to or less than",
+    "Assigns the starting spell:"
 ]
