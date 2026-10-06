@@ -273,5 +273,11 @@
     "Fight: (level)",
     "Unlocks a body",
     "An item's value",
-    ": - Minimum Range"
+    ": - Minimum Range",
+    "Assigns the starting spell:",
+    ": + cast per turn",
+    "Changes the strike element to at a rate of%",
+    "Neutral heals (Active)",
+    ": + cast per target",
+    "Resets the effects of a weapon whose level is equal to or less than"
 ]
