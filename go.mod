@@ -10,7 +10,7 @@ require (
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/dofusdude/ankabuffer v0.1.0
-	github.com/dofusdude/dodumap v0.8.0
+	github.com/dofusdude/dodumap v0.8.1
 	github.com/kvarenzn/ssm v0.3.2
 	github.com/pierrec/lz4/v4 v4.1.33
 	github.com/spf13/cobra v1.10.2
