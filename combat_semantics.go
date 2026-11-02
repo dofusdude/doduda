@@ -165,7 +165,8 @@ type mappedTriggers struct {
 
 var triggerNames = map[string][2]string{
 	"I": {"immediate", "applies immediately when the spell is cast"}, "D": {"damage_received", "target receives damage"},
-	"DA": {"air_damage_received", "target receives Air damage"}, "DBA": {"damage_received_from_ally", "target receives damage from an ally"},
+	"ATB": {"active_turn_begin", "the active fighter's turn begins"},
+	"DA":  {"air_damage_received", "target receives Air damage"}, "DBA": {"damage_received_from_ally", "target receives damage from an ally"},
 	"DBE": {"damage_received_from_enemy", "target receives damage from an enemy"}, "DCAC": {"close_combat_damage_received", "target receives close-combat damage"},
 	"DCCBE": {"critical_damage_received_from_enemy", "target receives a critical hit from an enemy"}, "DE": {"earth_damage_received", "target receives Earth damage"},
 	"DF": {"fire_damage_received", "target receives Fire damage"}, "DG": {"glyph_damage_received", "target receives glyph damage"},

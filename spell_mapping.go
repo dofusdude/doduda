@@ -94,13 +94,35 @@ type rawStatCost struct {
 }
 
 type rawSpell struct {
-	ID              int                `json:"id"`
-	NameID          flexibleInt        `json:"nameId"`
-	DescriptionID   flexibleInt        `json:"descriptionId"`
-	TypeID          int                `json:"typeId"`
-	IconID          int                `json:"iconId"`
-	LevelIDs        unityArray[int]    `json:"spellLevels"`
-	BasePreviewZone rawZoneDescription `json:"basePreviewZoneDescr"`
+	ID                           int                             `json:"id"`
+	AdminName                    string                          `json:"adminName"`
+	Order                        int                             `json:"order"`
+	NameID                       flexibleInt                     `json:"nameId"`
+	DescriptionID                flexibleInt                     `json:"descriptionId"`
+	TypeID                       int                             `json:"typeId"`
+	IconID                       int                             `json:"iconId"`
+	LevelIDs                     unityArray[int]                 `json:"spellLevels"`
+	BasePreviewZone              rawZoneDescription              `json:"basePreviewZoneDescr"`
+	BoundScriptUsageData         unityArray[rawSpellScriptUsage] `json:"boundScriptUsageData"`
+	CriticalBoundScriptUsageData unityArray[rawSpellScriptUsage] `json:"criticalHitBoundScriptUsageData"`
+}
+
+type rawSpellScriptUsage struct {
+	ID                          int             `json:"id"`
+	ScriptID                    int             `json:"scriptId"`
+	Order                       int             `json:"order"`
+	Random                      int             `json:"random"`
+	RandomGroup                 int             `json:"randomGroup"`
+	SequenceGroup               int             `json:"sequenceGroup"`
+	ActivationMask              string          `json:"activationMask"`
+	CasterMask                  string          `json:"casterMask"`
+	TargetMask                  string          `json:"targetMask"`
+	ActivationZone              string          `json:"activationZone"`
+	TargetZone                  string          `json:"targetZone"`
+	Criterion                   string          `json:"criterion"`
+	TargetsAffectedConcurrently int             `json:"areTargetsAffectedConcurrently"`
+	TargetTreatedAsCaster       int             `json:"isTargetTreatedAsCaster"`
+	SpellLevels                 unityArray[int] `json:"spellLevels"`
 }
 
 type rawSpellType struct {
@@ -125,10 +147,14 @@ type rawSpellLevel struct {
 	MaxStack               int                        `json:"maxStack"`
 	MaxCastPerTurn         int                        `json:"maxCastPerTurn"`
 	MaxCastPerTarget       int                        `json:"maxCastPerTarget"`
+	MaxGlobalCastPerTurn   int                        `json:"maxGlobalCastPerTurn"`
+	MaxGlobalCastPerTarget int                        `json:"maxGlobalCastPerTarget"`
 	MinCastInterval        int                        `json:"minCastInterval"`
 	InitialCooldown        int                        `json:"initialCooldown"`
 	GlobalCooldown         int                        `json:"globalCooldown"`
 	MinPlayerLevel         int                        `json:"minPlayerLevel"`
+	IgnorePrisonGlyph      int                        `json:"ignorePrisonGlyph"`
+	SpellBreed             int                        `json:"spellBreed"`
 	StatesCriterion        string                     `json:"statesCriterion"`
 	Effects                unityArray[rawSpellEffect] `json:"effects"`
 	CriticalEffects        unityArray[rawSpellEffect] `json:"criticalEffect"`
@@ -136,7 +162,9 @@ type rawSpellLevel struct {
 }
 
 type rawSpellEffect struct {
-	EffectID              int                `json:"effectId"`
+	EffectID              int                `json:"actionId"`
+	EffectUID             int                `json:"effectUid"`
+	TargetID              int                `json:"targetId"`
 	MinimumValue          int                `json:"diceNum"`
 	MaximumValue          int                `json:"diceSide"`
 	Value                 int                `json:"value"`
@@ -152,6 +180,8 @@ type rawSpellEffect struct {
 	TargetMask            string             `json:"targetMask"`
 	Triggers              string             `json:"triggers"`
 	EffectTriggerDuration int                `json:"effectTriggerDuration"`
+	DisplayZero           int                `json:"displayZero"`
+	Modificator           int                `json:"modificator"`
 	Zone                  rawZoneDescription `json:"zoneDescr"`
 }
 
@@ -173,75 +203,156 @@ type rawPreviewZone struct {
 }
 
 type rawMonster struct {
-	ID                int                         `json:"id"`
-	NameID            flexibleInt                 `json:"nameId"`
-	GfxID             int                         `json:"gfxId"`
-	RaceID            int                         `json:"race"`
-	Spells            unityArray[int]             `json:"spells"`
-	SpellGrades       unityArray[string]          `json:"spellGrades"`
-	Grades            unityArray[rawMonsterGrade] `json:"grades"`
-	SubareaIDs        unityArray[int]             `json:"subareas"`
-	FavoriteSubareaID int                         `json:"favoriteSubareaId"`
-	Drops             unityArray[rawMonsterDrop]  `json:"drops"`
+	ID                      int                                `json:"id"`
+	NameID                  flexibleInt                        `json:"nameId"`
+	GfxID                   int                                `json:"gfxId"`
+	RaceID                  int                                `json:"race"`
+	Spells                  unityArray[int]                    `json:"spells"`
+	SpellGrades             unityArray[string]                 `json:"spellGrades"`
+	Grades                  unityArray[rawMonsterGrade]        `json:"grades"`
+	SubareaIDs              unityArray[int]                    `json:"subareas"`
+	FavoriteSubareaID       int                                `json:"favoriteSubareaId"`
+	Drops                   unityArray[rawMonsterDrop]         `json:"drops"`
+	GlobalDrops             unityArray[rawGlobalDrop]          `json:"globalDrops"`
+	Look                    string                             `json:"look"`
+	CreatureBoneID          int                                `json:"creatureBoneId"`
+	IsBounty                int                                `json:"isBounty"`
+	CorrespondingMiniBossID int                                `json:"correspondingMiniBossId"`
+	SummonCost              int                                `json:"summonCost"`
+	SpeedAdjust             int                                `json:"speedAdjust"`
+	ScaleGradeRef           int                                `json:"scaleGradeRef"`
+	Achievements            unityArray[int]                    `json:"achievements"`
+	Souls                   unityArray[rawMonsterSoul]         `json:"souls"`
+	CharacteristicRatios    unityArray[rawCharacteristicRatio] `json:"characRatios"`
 }
 
 type rawMonsterDrop struct {
+	DropID                 int                                    `json:"dropId"`
+	ObjectID               int                                    `json:"objectId"`
+	Count                  int                                    `json:"count"`
+	PercentDropForGrade1   float64                                `json:"percentDropForGrade1"`
+	PercentDropForGrade2   float64                                `json:"percentDropForGrade2"`
+	PercentDropForGrade3   float64                                `json:"percentDropForGrade3"`
+	PercentDropForGrade4   float64                                `json:"percentDropForGrade4"`
+	PercentDropForGrade5   float64                                `json:"percentDropForGrade5"`
+	Criterions             string                                 `json:"criterions"`
+	HiddenIfInvalid        int                                    `json:"hiddenIfInvalidCriterions"`
+	DisableDropModificator int                                    `json:"disableDropModificator"`
+	SpecificCoefficients   unityArray[rawSpecificDropCoefficient] `json:"specificDropCoefficient"`
+}
+
+type rawSpecificDropCoefficient struct {
+	MonsterID       int     `json:"monsterId"`
+	MonsterGrade    int     `json:"monsterGrade"`
+	DropCoefficient float64 `json:"dropCoefficient"`
+	Criterions      string  `json:"criterions"`
+}
+
+type rawGlobalDrop struct {
 	ObjectID               int     `json:"objectId"`
-	PercentDropForGrade1   float64 `json:"percentDropForGrade1"`
-	PercentDropForGrade2   float64 `json:"percentDropForGrade2"`
-	PercentDropForGrade3   float64 `json:"percentDropForGrade3"`
-	PercentDropForGrade4   float64 `json:"percentDropForGrade4"`
-	PercentDropForGrade5   float64 `json:"percentDropForGrade5"`
-	Criterions             string  `json:"criterions"`
-	HiddenIfInvalid        int     `json:"hiddenIfInvalidCriterions"`
+	MinPercent             float64 `json:"minPercentDrop"`
+	MaxPercent             float64 `json:"maxPercentDrop"`
+	ReceiverCriterion      string  `json:"receiverCriterion"`
+	AlterationID           int     `json:"alterationId"`
 	DisableDropModificator int     `json:"disableDropModificator"`
 }
 
+type rawMonsterSoul struct {
+	ObjectID     int    `json:"objectId"`
+	Criterion    string `json:"criterion"`
+	HasCriterion int    `json:"hasCriterion"`
+}
+
+type rawCharacteristicRatio struct {
+	Values unityArray[float64] `json:"values"`
+}
+
 type rawMonsterCharacteristics struct {
-	APRemoval         int `json:"aPRemoval"`
-	Agility           int `json:"agility"`
-	AirResistance     int `json:"airResistance"`
-	BonusAirDamage    int `json:"bonusAirDamage"`
-	BonusEarthDamage  int `json:"bonusEarthDamage"`
-	BonusFireDamage   int `json:"bonusFireDamage"`
-	BonusWaterDamage  int `json:"bonusWaterDamage"`
-	Chance            int `json:"chance"`
-	EarthResistance   int `json:"earthResistance"`
-	FireResistance    int `json:"fireResistance"`
-	Intelligence      int `json:"intelligence"`
-	LifePoints        int `json:"lifePoints"`
-	NeutralResistance int `json:"neutralResistance"`
-	Strength          int `json:"strength"`
-	TackleBlock       int `json:"tackleBlock"`
-	TackleEvade       int `json:"tackleEvade"`
-	WaterResistance   int `json:"waterResistance"`
-	Wisdom            int `json:"wisdom"`
+	APRemoval               int `json:"aPRemoval"`
+	Agility                 int `json:"agility"`
+	ActionPoints            int `json:"actionPoints"`
+	MovementPoints          int `json:"movementPoints"`
+	AirResistance           int `json:"reductionAir"`
+	BonusAirDamage          int `json:"airDamageBonus"`
+	BonusEarthDamage        int `json:"earthDamageBonus"`
+	BonusFireDamage         int `json:"fireDamageBonus"`
+	BonusWaterDamage        int `json:"waterDamageBonus"`
+	Chance                  int `json:"chance"`
+	EarthResistance         int `json:"reductionEarth"`
+	FireResistance          int `json:"reductionFire"`
+	Intelligence            int `json:"intelligence"`
+	LifePoints              int `json:"lifePoints"`
+	NeutralResistance       int `json:"reductionNeutral"`
+	Strength                int `json:"strength"`
+	TackleBlock             int `json:"tackleBonus"`
+	TackleEvade             int `json:"tackleEvade"`
+	WaterResistance         int `json:"reductionWater"`
+	Wisdom                  int `json:"wisdom"`
+	APAttack                int `json:"apAttack"`
+	MPAttack                int `json:"mpAttack"`
+	PADodge                 int `json:"paLostDodge"`
+	PMDodge                 int `json:"mpLostDodge"`
+	BonusRange              int `json:"rangeBonus"`
+	DamageBonus             int `json:"damageBonus"`
+	PercentDamageBonus      int `json:"percentDamageBonus"`
+	CriticalHitBonus        int `json:"criticalHitBonus"`
+	CriticalDamageBonus     int `json:"criticalDamageBonus"`
+	CriticalDamageReduction int `json:"criticalDamageReduction"`
+	PushDamageBonus         int `json:"pushDamageBonus"`
+	PushDamageReduction     int `json:"pushDamageReduction"`
+	TrapDamageBonus         int `json:"trapDamageBonus"`
+	TrapDamageBonusPercent  int `json:"trapDamageBonusPercent"`
+	HealBonus               int `json:"healBonus"`
+	InitiativeBonus         int `json:"initiativeBonus"`
+	MaxSummon               int `json:"maxSummon"`
+	Vitality                int `json:"vitality"`
 }
 
 type rawMonsterGrade struct {
-	ActionPoints         int                       `json:"actionPoints"`
-	Agility              int                       `json:"agility"`
-	AirResistance        int                       `json:"airResistance"`
-	BonusCharacteristics rawMonsterCharacteristics `json:"bonusCharacteristics"`
-	BonusRange           int                       `json:"bonusRange"`
-	Chance               int                       `json:"chance"`
-	DamageReflect        int                       `json:"damageReflect"`
-	EarthResistance      int                       `json:"earthResistance"`
-	FireResistance       int                       `json:"fireResistance"`
-	Grade                int                       `json:"grade"`
-	GradeXP              int                       `json:"gradeXp"`
-	Intelligence         int                       `json:"intelligence"`
-	Level                int                       `json:"level"`
-	LifePoints           int                       `json:"lifePoints"`
-	MovementPoints       int                       `json:"movementPoints"`
-	NeutralResistance    int                       `json:"neutralResistance"`
-	PADodge              int                       `json:"paDodge"`
-	PMDodge              int                       `json:"pmDodge"`
-	StartingSpellID      int                       `json:"startingSpellId"`
-	Strength             int                       `json:"strength"`
-	Vitality             int                       `json:"vitality"`
-	WaterResistance      int                       `json:"waterResistance"`
-	Wisdom               int                       `json:"wisdom"`
+	ActionPoints            int                       `json:"actionPoints"`
+	Agility                 int                       `json:"agility"`
+	AirResistance           int                       `json:"reductionAir"`
+	BonusCharacteristics    rawMonsterCharacteristics `json:"bonusCharacteristics"`
+	BonusRange              int                       `json:"rangeBonus"`
+	Chance                  int                       `json:"chance"`
+	DamageReflect           int                       `json:"damageReflect"`
+	EarthResistance         int                       `json:"reductionEarth"`
+	FireResistance          int                       `json:"reductionFire"`
+	Grade                   int                       `json:"grade"`
+	GradeXP                 int                       `json:"xp"`
+	Intelligence            int                       `json:"intelligence"`
+	Level                   int                       `json:"level"`
+	LifePoints              int                       `json:"lifePoints"`
+	MovementPoints          int                       `json:"movementPoints"`
+	NeutralResistance       int                       `json:"reductionNeutral"`
+	PADodge                 int                       `json:"paLostDodge"`
+	PMDodge                 int                       `json:"mpLostDodge"`
+	StartingSpellID         int                       `json:"startingSpellId"`
+	Strength                int                       `json:"strength"`
+	Vitality                int                       `json:"vitality"`
+	WaterResistance         int                       `json:"reductionWater"`
+	Wisdom                  int                       `json:"wisdom"`
+	APAttack                int                       `json:"apAttack"`
+	MPAttack                int                       `json:"mpAttack"`
+	DamageBonus             int                       `json:"damageBonus"`
+	PercentDamageBonus      int                       `json:"percentDamageBonus"`
+	CriticalHitBonus        int                       `json:"criticalHitBonus"`
+	CriticalDamageBonus     int                       `json:"criticalDamageBonus"`
+	CriticalDamageReduction int                       `json:"criticalDamageReduction"`
+	PushDamageBonus         int                       `json:"pushDamageBonus"`
+	PushDamageReduction     int                       `json:"pushDamageReduction"`
+	TrapDamageBonus         int                       `json:"trapDamageBonus"`
+	TrapDamageBonusPercent  int                       `json:"trapDamageBonusPercent"`
+	HealBonus               int                       `json:"healBonus"`
+	InitiativeBonus         int                       `json:"initiativeBonus"`
+	TackleBonus             int                       `json:"tackleBonus"`
+	TackleEvade             int                       `json:"tackleEvade"`
+	MaxSummon               int                       `json:"maxSummon"`
+	AirDamageBonus          int                       `json:"airDamageBonus"`
+	EarthDamageBonus        int                       `json:"earthDamageBonus"`
+	FireDamageBonus         int                       `json:"fireDamageBonus"`
+	WaterDamageBonus        int                       `json:"waterDamageBonus"`
+	NeutralDamageBonus      int                       `json:"neutralDamageBonus"`
 }
 
 type rawMonsterRace struct {
@@ -251,6 +362,11 @@ type rawMonsterRace struct {
 }
 
 type rawMonsterSuperRace struct {
+	ID     int         `json:"id"`
+	NameID flexibleInt `json:"nameId"`
+}
+
+type rawAchievement struct {
 	ID     int         `json:"id"`
 	NameID flexibleInt `json:"nameId"`
 }
@@ -329,10 +445,14 @@ type mappedSpellLevel struct {
 	MaxStack               int                   `json:"max_stack"`
 	MaxCastPerTurn         int                   `json:"max_cast_per_turn"`
 	MaxCastPerTarget       int                   `json:"max_cast_per_target"`
+	MaxGlobalCastPerTurn   int                   `json:"max_global_cast_per_turn"`
+	MaxGlobalCastPerTarget int                   `json:"max_global_cast_per_target"`
 	MinCastInterval        int                   `json:"min_cast_interval"`
 	InitialCooldown        int                   `json:"initial_cooldown"`
 	GlobalCooldown         int                   `json:"global_cooldown"`
 	MinPlayerLevel         int                   `json:"min_player_level"`
+	IgnorePrisonGlyph      bool                  `json:"ignore_prison_glyph"`
+	SpellBreed             int                   `json:"spell_breed"`
 	StatesCriterion        *mappedStateCriterion `json:"states_criterion"`
 	PreviewZones           []mappedPreviewZone   `json:"preview_zones"`
 	Effects                []mappedSpellEffect   `json:"effects"`
@@ -350,6 +470,8 @@ type mappedPreviewZone struct {
 
 type mappedSpellEffect struct {
 	mapping.MappedMultilangEffect
+	EffectUID         int              `json:"effect_uid"`
+	TargetID          int              `json:"target_id"`
 	Zone              mappedZone       `json:"zone"`
 	TargetMask        mappedTargetMask `json:"target_mask"`
 	Triggers          mappedTriggers   `json:"triggers"`
@@ -360,35 +482,49 @@ type mappedSpellEffect struct {
 	Order             int              `json:"order"`
 	Dispellable       int              `json:"dispellable"`
 	TriggeredDuration int              `json:"triggered_duration"`
+	DisplayZero       bool             `json:"display_zero"`
+	Modifier          int              `json:"modifier"`
 }
 
 type mappedSpell struct {
-	AnkamaID        int                    `json:"ankama_id"`
-	Name            map[string]string      `json:"name"`
-	Description     map[string]string      `json:"description"`
-	Type            mappedSpellType        `json:"type"`
-	IconID          int                    `json:"icon_id"`
-	BasePreviewZone mappedZone             `json:"base_preview_zone"`
-	Classes         []mappedNamedReference `json:"classes"`
-	Monsters        []mappedNamedReference `json:"monsters"`
-	Levels          []mappedSpellLevel     `json:"levels"`
+	AnkamaID        int                      `json:"ankama_id"`
+	AdminName       string                   `json:"admin_name"`
+	Order           int                      `json:"order"`
+	Name            map[string]string        `json:"name"`
+	Description     map[string]string        `json:"description"`
+	Type            mappedSpellType          `json:"type"`
+	IconID          int                      `json:"icon_id"`
+	BasePreviewZone mappedZone               `json:"base_preview_zone"`
+	Classes         []mappedNamedReference   `json:"classes"`
+	Monsters        []mappedNamedReference   `json:"monsters"`
+	Levels          []mappedSpellLevel       `json:"levels"`
+	Scripts         []mappedSpellScriptUsage `json:"scripts"`
+	CriticalScripts []mappedSpellScriptUsage `json:"critical_scripts"`
+}
+
+type mappedSpellScriptUsage struct {
+	ConditionExpression         string                           `json:"condition_expression"`
+	AnkamaID                    int                              `json:"ankama_id"`
+	ScriptID                    int                              `json:"script_id"`
+	Order                       int                              `json:"order"`
+	Random                      int                              `json:"random"`
+	RandomGroup                 int                              `json:"random_group"`
+	SequenceGroup               int                              `json:"sequence_group"`
+	ActivationMask              mappedTargetMask                 `json:"activation_mask"`
+	CasterMask                  mappedTargetMask                 `json:"caster_mask"`
+	TargetMask                  mappedTargetMask                 `json:"target_mask"`
+	ActivationZone              mappedZone                       `json:"activation_zone"`
+	TargetZone                  mappedZone                       `json:"target_zone"`
+	Condition                   *mapping.ConditionTreeNodeMapped `json:"condition"`
+	TargetsAffectedConcurrently bool                             `json:"targets_affected_concurrently"`
+	TargetTreatedAsCaster       bool                             `json:"target_treated_as_caster"`
+	SpellLevelIDs               []int                            `json:"spell_level_ids"`
 }
 
 type mappedMonsterRace struct {
 	AnkamaID  int                  `json:"ankama_id"`
 	Name      map[string]string    `json:"name"`
 	SuperRace mappedNamedReference `json:"super_race"`
-}
-
-type mappedMonsterSpellGrade struct {
-	MonsterGrade  int `json:"monster_grade"`
-	MinSpellGrade int `json:"min_spell_grade"`
-	MaxSpellGrade int `json:"max_spell_grade"`
-}
-
-type mappedMonsterSpell struct {
-	Spell       mappedSpell               `json:"spell"`
-	GradeRanges []mappedMonsterSpellGrade `json:"grade_ranges"`
 }
 
 type mappedStartingSpell struct {
@@ -399,67 +535,155 @@ type mappedStartingSpell struct {
 }
 
 type mappedMonsterCharacteristics struct {
-	APRemoval         int `json:"ap_removal"`
-	Agility           int `json:"agility"`
-	AirResistance     int `json:"air_resistance"`
-	BonusAirDamage    int `json:"bonus_air_damage"`
-	BonusEarthDamage  int `json:"bonus_earth_damage"`
-	BonusFireDamage   int `json:"bonus_fire_damage"`
-	BonusWaterDamage  int `json:"bonus_water_damage"`
-	Chance            int `json:"chance"`
-	EarthResistance   int `json:"earth_resistance"`
-	FireResistance    int `json:"fire_resistance"`
-	Intelligence      int `json:"intelligence"`
-	LifePoints        int `json:"life_points"`
-	NeutralResistance int `json:"neutral_resistance"`
-	Strength          int `json:"strength"`
-	TackleBlock       int `json:"tackle_block"`
-	TackleEvade       int `json:"tackle_evade"`
-	WaterResistance   int `json:"water_resistance"`
-	Wisdom            int `json:"wisdom"`
+	APRemoval               int `json:"ap_removal"`
+	ActionPoints            int `json:"action_points"`
+	MovementPoints          int `json:"movement_points"`
+	Agility                 int `json:"agility"`
+	AirResistance           int `json:"air_resistance"`
+	BonusAirDamage          int `json:"bonus_air_damage"`
+	BonusEarthDamage        int `json:"bonus_earth_damage"`
+	BonusFireDamage         int `json:"bonus_fire_damage"`
+	BonusWaterDamage        int `json:"bonus_water_damage"`
+	Chance                  int `json:"chance"`
+	EarthResistance         int `json:"earth_resistance"`
+	FireResistance          int `json:"fire_resistance"`
+	Intelligence            int `json:"intelligence"`
+	LifePoints              int `json:"life_points"`
+	NeutralResistance       int `json:"neutral_resistance"`
+	Strength                int `json:"strength"`
+	TackleBlock             int `json:"tackle_block"`
+	TackleEvade             int `json:"tackle_evade"`
+	WaterResistance         int `json:"water_resistance"`
+	Wisdom                  int `json:"wisdom"`
+	APAttack                int `json:"ap_attack"`
+	MPAttack                int `json:"mp_attack"`
+	PADodge                 int `json:"pa_dodge"`
+	PMDodge                 int `json:"pm_dodge"`
+	BonusRange              int `json:"bonus_range"`
+	DamageBonus             int `json:"damage_bonus"`
+	PercentDamageBonus      int `json:"percent_damage_bonus"`
+	CriticalHitBonus        int `json:"critical_hit_bonus"`
+	CriticalDamageBonus     int `json:"critical_damage_bonus"`
+	CriticalDamageReduction int `json:"critical_damage_reduction"`
+	PushDamageBonus         int `json:"push_damage_bonus"`
+	PushDamageReduction     int `json:"push_damage_reduction"`
+	TrapDamageBonus         int `json:"trap_damage_bonus"`
+	TrapDamageBonusPercent  int `json:"trap_damage_bonus_percent"`
+	HealBonus               int `json:"heal_bonus"`
+	InitiativeBonus         int `json:"initiative_bonus"`
+	MaxSummon               int `json:"max_summon"`
+	Vitality                int `json:"vitality"`
 }
 
 type mappedMonsterGrade struct {
-	ActionPoints         int                          `json:"action_points"`
-	Agility              int                          `json:"agility"`
-	AirResistance        int                          `json:"air_resistance"`
-	BonusCharacteristics mappedMonsterCharacteristics `json:"bonus_characteristics"`
-	BonusRange           int                          `json:"bonus_range"`
-	Chance               int                          `json:"chance"`
-	DamageReflect        int                          `json:"damage_reflect"`
-	EarthResistance      int                          `json:"earth_resistance"`
-	FireResistance       int                          `json:"fire_resistance"`
-	Grade                int                          `json:"grade"`
-	GradeXP              int                          `json:"grade_xp"`
-	Intelligence         int                          `json:"intelligence"`
-	Level                int                          `json:"level"`
-	LifePoints           int                          `json:"life_points"`
-	MovementPoints       int                          `json:"movement_points"`
-	NeutralResistance    int                          `json:"neutral_resistance"`
-	PADodge              int                          `json:"pa_dodge"`
-	PMDodge              int                          `json:"pm_dodge"`
-	StartingSpell        *mappedStartingSpell         `json:"starting_spell"`
-	Strength             int                          `json:"strength"`
-	Vitality             int                          `json:"vitality"`
-	WaterResistance      int                          `json:"water_resistance"`
-	Wisdom               int                          `json:"wisdom"`
+	ActionPoints            int                          `json:"action_points"`
+	Agility                 int                          `json:"agility"`
+	AirResistance           int                          `json:"air_resistance"`
+	BonusCharacteristics    mappedMonsterCharacteristics `json:"bonus_characteristics"`
+	BonusRange              int                          `json:"bonus_range"`
+	Chance                  int                          `json:"chance"`
+	DamageReflect           int                          `json:"damage_reflect"`
+	EarthResistance         int                          `json:"earth_resistance"`
+	FireResistance          int                          `json:"fire_resistance"`
+	Grade                   int                          `json:"grade"`
+	GradeXP                 int                          `json:"grade_xp"`
+	Intelligence            int                          `json:"intelligence"`
+	Level                   int                          `json:"level"`
+	LifePoints              int                          `json:"life_points"`
+	MovementPoints          int                          `json:"movement_points"`
+	NeutralResistance       int                          `json:"neutral_resistance"`
+	PADodge                 int                          `json:"pa_dodge"`
+	PMDodge                 int                          `json:"pm_dodge"`
+	StartingSpell           *mappedStartingSpell         `json:"starting_spell"`
+	Strength                int                          `json:"strength"`
+	Vitality                int                          `json:"vitality"`
+	WaterResistance         int                          `json:"water_resistance"`
+	Wisdom                  int                          `json:"wisdom"`
+	Spells                  []mappedSpell                `json:"spells"`
+	APAttack                int                          `json:"ap_attack"`
+	MPAttack                int                          `json:"mp_attack"`
+	DamageBonus             int                          `json:"damage_bonus"`
+	PercentDamageBonus      int                          `json:"percent_damage_bonus"`
+	CriticalHitBonus        int                          `json:"critical_hit_bonus"`
+	CriticalDamageBonus     int                          `json:"critical_damage_bonus"`
+	CriticalDamageReduction int                          `json:"critical_damage_reduction"`
+	PushDamageBonus         int                          `json:"push_damage_bonus"`
+	PushDamageReduction     int                          `json:"push_damage_reduction"`
+	TrapDamageBonus         int                          `json:"trap_damage_bonus"`
+	TrapDamageBonusPercent  int                          `json:"trap_damage_bonus_percent"`
+	HealBonus               int                          `json:"heal_bonus"`
+	InitiativeBonus         int                          `json:"initiative_bonus"`
+	TackleBonus             int                          `json:"tackle_bonus"`
+	TackleEvade             int                          `json:"tackle_evade"`
+	MaxSummon               int                          `json:"max_summon"`
+	DamageBonuses           mappedElementalDamageBonuses `json:"damage_bonuses"`
+}
+
+type mappedElementalDamageBonuses struct {
+	Air     int `json:"air"`
+	Earth   int `json:"earth"`
+	Fire    int `json:"fire"`
+	Water   int `json:"water"`
+	Neutral int `json:"neutral"`
 }
 
 type mappedMonster struct {
-	AnkamaID       int                   `json:"ankama_id"`
-	Name           map[string]string     `json:"name"`
-	GfxID          int                   `json:"gfx_id"`
-	Race           mappedMonsterRace     `json:"race"`
-	Grades         []mappedMonsterGrade  `json:"grades"`
-	Spells         []mappedMonsterSpell  `json:"spells"`
-	SpawnLocations []mappedSpawnLocation `json:"spawn_locations"`
-	Drops          []mappedMonsterDrop   `json:"drops"`
+	AnkamaID              int                    `json:"ankama_id"`
+	Name                  map[string]string      `json:"name"`
+	GfxID                 int                    `json:"gfx_id"`
+	Race                  mappedMonsterRace      `json:"race"`
+	Grades                []mappedMonsterGrade   `json:"grades"`
+	SpawnLocations        []mappedSpawnLocation  `json:"spawn_locations"`
+	Drops                 []mappedMonsterDrop    `json:"drops"`
+	GlobalDrops           []mappedGlobalDrop     `json:"global_drops"`
+	Appearance            *mappedClassAppearance `json:"appearance"`
+	CreatureBoneID        int                    `json:"creature_bone_id"`
+	IsBounty              bool                   `json:"is_bounty"`
+	CorrespondingMiniBoss *mappedNamedReference  `json:"corresponding_mini_boss"`
+	SummonCost            int                    `json:"summon_cost"`
+	SpeedAdjust           int                    `json:"speed_adjust"`
+	ScaleGradeReference   int                    `json:"scale_grade_reference"`
+	Achievements          []mappedNamedReference `json:"achievements"`
+	Souls                 []mappedMonsterSoul    `json:"souls"`
+	CharacteristicRatios  [][]float64            `json:"characteristic_ratios"`
 }
 
 type mappedMonsterDrop struct {
-	Item          mappedNamedReference `json:"item"`
-	RatesPercent  []mappedGradeRate    `json:"rates_percent"`
-	HasConditions bool                 `json:"has_conditions"`
+	ConditionExpression       string                           `json:"condition_expression"`
+	DropID                    int                              `json:"drop_id"`
+	Item                      mappedNamedReference             `json:"item"`
+	RatesPercent              []mappedGradeRate                `json:"rates_percent"`
+	HasConditions             bool                             `json:"has_conditions"`
+	Condition                 *mapping.ConditionTreeNodeMapped `json:"condition"`
+	Count                     int                              `json:"count"`
+	HiddenIfInvalidConditions bool                             `json:"hidden_if_invalid_conditions"`
+	DisableDropModifier       bool                             `json:"disable_drop_modifier"`
+	SpecificCoefficients      []mappedSpecificDropCoefficient  `json:"specific_coefficients"`
+}
+
+type mappedSpecificDropCoefficient struct {
+	ConditionExpression string                           `json:"condition_expression"`
+	MonsterGrade        int                              `json:"monster_grade"`
+	Coefficient         float64                          `json:"coefficient"`
+	Condition           *mapping.ConditionTreeNodeMapped `json:"condition"`
+}
+
+type mappedGlobalDrop struct {
+	HasConditions       bool                             `json:"has_conditions"`
+	ConditionExpression string                           `json:"condition_expression"`
+	Item                mappedNamedReference             `json:"item"`
+	MinPercent          float64                          `json:"min_percent"`
+	MaxPercent          float64                          `json:"max_percent"`
+	Condition           *mapping.ConditionTreeNodeMapped `json:"condition"`
+	AlterationID        int                              `json:"alteration_id"`
+	DisableDropModifier bool                             `json:"disable_drop_modifier"`
+}
+
+type mappedMonsterSoul struct {
+	HasConditions       bool                             `json:"has_conditions"`
+	ConditionExpression string                           `json:"condition_expression"`
+	Item                mappedNamedReference             `json:"item"`
+	Condition           *mapping.ConditionTreeNodeMapped `json:"condition"`
 }
 
 type mappedGradeRate struct {
@@ -517,11 +741,13 @@ func mapSpellEffects(gameData *mapping.JSONGameDataUnity, effects []rawSpellEffe
 		if effect != nil {
 			raw := effects[index]
 			mappedEffects = append(mappedEffects, mappedSpellEffect{
-				MappedMultilangEffect: *effect, Zone: mapZoneDescription(raw.Zone),
+				MappedMultilangEffect: *effect, EffectUID: raw.EffectUID, TargetID: raw.TargetID,
+				Zone:       mapZoneDescription(raw.Zone),
 				TargetMask: mapTargetMask(raw.TargetMask, states, monsters, breeds, *languages),
 				Triggers:   mapTriggers(raw.Triggers, states, monsters, breeds, spells, *languages), Duration: raw.Duration,
 				Delay: raw.Delay, Random: raw.Random, Group: raw.Group, Order: raw.Order,
 				Dispellable: raw.Dispellable, TriggeredDuration: raw.EffectTriggerDuration,
+				DisplayZero: raw.DisplayZero != 0, Modifier: raw.Modificator,
 			})
 		}
 	}
@@ -537,6 +763,26 @@ func mapPreviewZones(raw []rawPreviewZone, states map[int]rawSpellState, monster
 			CasterMask:     mapTargetMask(zone.CasterMask, states, monsters, breeds, languages),
 			Hidden:         zone.Hidden != 0, ActivationZone: mapZoneDescription(zone.ActivationZone),
 			DisplayZone: mapZoneDescription(zone.DisplayZone),
+		})
+	}
+	return result
+}
+
+func mapSpellScripts(raw []rawSpellScriptUsage, states map[int]rawSpellState, monsters map[int]rawMonster, breeds map[int]rawBreed, languages map[string]mapping.LangDictUnity, gameData *mapping.JSONGameDataUnity) []mappedSpellScriptUsage {
+	result := make([]mappedSpellScriptUsage, 0, len(raw))
+	for _, usage := range raw {
+		result = append(result, mappedSpellScriptUsage{
+			AnkamaID: usage.ID, ScriptID: usage.ScriptID, Order: usage.Order,
+			Random: usage.Random, RandomGroup: usage.RandomGroup, SequenceGroup: usage.SequenceGroup,
+			ActivationMask: mapTargetMask(usage.ActivationMask, states, monsters, breeds, languages),
+			CasterMask:     mapTargetMask(usage.CasterMask, states, monsters, breeds, languages),
+			TargetMask:     mapTargetMask(usage.TargetMask, states, monsters, breeds, languages),
+			ActivationZone: parseRawZone(usage.ActivationZone), TargetZone: parseRawZone(usage.TargetZone),
+			Condition:                   mapping.ParseConditionUnity(usage.Criterion, &languages, gameData),
+			ConditionExpression:         usage.Criterion,
+			TargetsAffectedConcurrently: usage.TargetsAffectedConcurrently != 0,
+			TargetTreatedAsCaster:       usage.TargetTreatedAsCaster != 0,
+			SpellLevelIDs:               usage.SpellLevels.Array,
 		})
 	}
 	return result
@@ -614,8 +860,10 @@ func mapSpellLevel(level rawSpellLevel, states map[int]rawSpellState, monsters m
 		MinRange: level.MinRange, MaxRange: level.Range,
 		CriticalHitProbability: level.CriticalHitProbability, MaxStack: level.MaxStack,
 		MaxCastPerTurn: level.MaxCastPerTurn, MaxCastPerTarget: level.MaxCastPerTarget,
+		MaxGlobalCastPerTurn: level.MaxGlobalCastPerTurn, MaxGlobalCastPerTarget: level.MaxGlobalCastPerTarget,
 		MinCastInterval: level.MinCastInterval, InitialCooldown: level.InitialCooldown,
 		GlobalCooldown: level.GlobalCooldown, MinPlayerLevel: level.MinPlayerLevel,
+		IgnorePrisonGlyph: level.IgnorePrisonGlyph != 0, SpellBreed: level.SpellBreed,
 		StatesCriterion: mapStateCriterion(level.StatesCriterion, states, *languages),
 		PreviewZones:    mapPreviewZones(level.PreviewZones.Array, states, monsters, breeds, *languages),
 		Effects:         mapSpellEffects(gameData, level.Effects.Array, states, monsters, breeds, spells, languages),
@@ -623,32 +871,79 @@ func mapSpellLevel(level rawSpellLevel, states map[int]rawSpellState, monsters m
 	}
 }
 
-func parseMonsterSpellGrades(encoded string) []mappedMonsterSpellGrade {
+type monsterSpellAssignment struct {
+	MonsterGrade int
+	MonsterLevel int
+	SpellGrade   int
+}
+
+func parseMonsterSpellGrades(encoded string) ([]monsterSpellAssignment, error) {
+	if encoded == "" || encoded == "null" {
+		return []monsterSpellAssignment{}, nil
+	}
 	parts := strings.Split(encoded, ";")
-	ranges := make([]mappedMonsterSpellGrade, 0, len(parts))
+	assignments := make([]monsterSpellAssignment, 0, len(parts))
 	for index, part := range parts {
 		bounds := strings.Split(part, ",")
 		if len(bounds) != 2 {
+			return nil, fmt.Errorf("invalid monster spell grade assignment %q", part)
+		}
+		// Ankama pads the list to five entries even when a monster has fewer
+		// grades. A null monster level marks one of those absent grades.
+		if bounds[1] == "null" {
 			continue
 		}
-		minimum, minErr := strconv.Atoi(bounds[0])
-		maximum, maxErr := strconv.Atoi(bounds[1])
-		if minErr == nil && maxErr == nil {
-			ranges = append(ranges, mappedMonsterSpellGrade{index + 1, minimum, maximum})
+		spellGrade, spellErr := strconv.Atoi(bounds[0])
+		monsterLevel, levelErr := strconv.Atoi(bounds[1])
+		if spellErr != nil || levelErr != nil {
+			return nil, fmt.Errorf("invalid monster spell grade assignment %q", part)
+		}
+		assignments = append(assignments, monsterSpellAssignment{
+			MonsterGrade: index + 1, MonsterLevel: monsterLevel, SpellGrade: spellGrade,
+		})
+	}
+	return assignments, nil
+}
+
+func spellAtResolvedGrade(spell mappedSpell, requestedGrade int) (mappedSpell, bool) {
+	if requestedGrade <= 0 || len(spell.Levels) == 0 {
+		return mappedSpell{}, false
+	}
+	selected := spell.Levels[0]
+	for _, level := range spell.Levels {
+		if level.Grade == requestedGrade {
+			selected = level
+			break
+		}
+		if level.Grade <= requestedGrade && level.Grade > selected.Grade {
+			selected = level
+		}
+		if requestedGrade < selected.Grade && level.Grade < selected.Grade {
+			selected = level
 		}
 	}
-	return ranges
+	resolved := spell
+	resolved.Levels = []mappedSpellLevel{selected}
+	return resolved, true
 }
 
 func mapCharacteristics(value rawMonsterCharacteristics) mappedMonsterCharacteristics {
 	return mappedMonsterCharacteristics{
-		APRemoval: value.APRemoval, Agility: value.Agility, AirResistance: value.AirResistance,
+		APRemoval: value.APRemoval, ActionPoints: value.ActionPoints, MovementPoints: value.MovementPoints,
+		Agility: value.Agility, AirResistance: value.AirResistance,
 		BonusAirDamage: value.BonusAirDamage, BonusEarthDamage: value.BonusEarthDamage,
 		BonusFireDamage: value.BonusFireDamage, BonusWaterDamage: value.BonusWaterDamage,
 		Chance: value.Chance, EarthResistance: value.EarthResistance, FireResistance: value.FireResistance,
 		Intelligence: value.Intelligence, LifePoints: value.LifePoints, NeutralResistance: value.NeutralResistance,
 		Strength: value.Strength, TackleBlock: value.TackleBlock, TackleEvade: value.TackleEvade,
 		WaterResistance: value.WaterResistance, Wisdom: value.Wisdom,
+		APAttack: value.APAttack, MPAttack: value.MPAttack, PADodge: value.PADodge, PMDodge: value.PMDodge,
+		BonusRange: value.BonusRange, DamageBonus: value.DamageBonus, PercentDamageBonus: value.PercentDamageBonus,
+		CriticalHitBonus: value.CriticalHitBonus, CriticalDamageBonus: value.CriticalDamageBonus,
+		CriticalDamageReduction: value.CriticalDamageReduction, PushDamageBonus: value.PushDamageBonus,
+		PushDamageReduction: value.PushDamageReduction, TrapDamageBonus: value.TrapDamageBonus,
+		TrapDamageBonusPercent: value.TrapDamageBonusPercent, HealBonus: value.HealBonus,
+		InitiativeBonus: value.InitiativeBonus, MaxSummon: value.MaxSummon, Vitality: value.Vitality,
 	}
 }
 
@@ -679,21 +974,43 @@ func parseIntegerList(raw string) ([]int, error) {
 }
 
 func mapClassAppearance(raw string, colors []int) (mappedClassAppearance, error) {
-	parts := strings.Split(strings.TrimSuffix(strings.TrimPrefix(raw, "{"), "}"), "|")
-	if len(parts) < 4 {
+	// Some monsters encode several conditional looks separated by `},{`.
+	// The first entry is the stable base appearance exposed by this mapping.
+	baseLook := raw
+	if separator := strings.Index(baseLook, "},{"); separator >= 0 {
+		baseLook = baseLook[:separator+1]
+	}
+	parts := strings.Split(strings.TrimSuffix(strings.TrimPrefix(baseLook, "{"), "}"), "|")
+	if len(parts) == 0 || parts[0] == "" {
 		return mappedClassAppearance{}, fmt.Errorf("invalid entity look %q", raw)
 	}
-	bonesID, err := strconv.Atoi(parts[0])
+	bonesValue := strings.SplitN(parts[0], "$", 2)[0]
+	bonesID, err := strconv.Atoi(bonesValue)
 	if err != nil {
 		return mappedClassAppearance{}, fmt.Errorf("parse entity look bones %q: %w", raw, err)
 	}
-	skins, err := parseIntegerList(parts[1])
-	if err != nil {
-		return mappedClassAppearance{}, fmt.Errorf("parse entity look skins %q: %w", raw, err)
+	if strings.Contains(parts[0], "$") {
+		if colors == nil {
+			colors = []int{}
+		}
+		return mappedClassAppearance{
+			BonesID: bonesID, SkinIDs: []int{}, Scale: mappedScale{X: 100, Y: 100}, DefaultColors: colors,
+		}, nil
 	}
-	scales, err := parseIntegerList(parts[3])
-	if err != nil {
-		return mappedClassAppearance{}, fmt.Errorf("parse entity look scale %q: %w", raw, err)
+	skins := []int{}
+	if len(parts) > 1 {
+		skins, err = parseIntegerList(parts[1])
+		if err != nil {
+			return mappedClassAppearance{}, fmt.Errorf("parse entity look skins %q: %w", raw, err)
+		}
+	}
+	scales := []int{}
+	if len(parts) > 3 {
+		scaleValue := strings.SplitN(parts[3], "$", 2)[0]
+		scales, err = parseIntegerList(scaleValue)
+		if err != nil {
+			return mappedClassAppearance{}, fmt.Errorf("parse entity look scale %q: %w", raw, err)
+		}
 	}
 	scale := mappedScale{X: 100, Y: 100}
 	if len(scales) == 1 {
@@ -733,6 +1050,15 @@ func mapMonsterGrade(grade rawMonsterGrade, levels map[int]rawSpellLevel, spells
 		MovementPoints: grade.MovementPoints, NeutralResistance: grade.NeutralResistance,
 		PADodge: grade.PADodge, PMDodge: grade.PMDodge, StartingSpell: startingSpell,
 		Strength: grade.Strength, Vitality: grade.Vitality, WaterResistance: grade.WaterResistance, Wisdom: grade.Wisdom,
+		APAttack: grade.APAttack, MPAttack: grade.MPAttack, DamageBonus: grade.DamageBonus,
+		PercentDamageBonus: grade.PercentDamageBonus, CriticalHitBonus: grade.CriticalHitBonus,
+		CriticalDamageBonus: grade.CriticalDamageBonus, CriticalDamageReduction: grade.CriticalDamageReduction,
+		PushDamageBonus: grade.PushDamageBonus, PushDamageReduction: grade.PushDamageReduction,
+		TrapDamageBonus: grade.TrapDamageBonus, TrapDamageBonusPercent: grade.TrapDamageBonusPercent,
+		HealBonus: grade.HealBonus, InitiativeBonus: grade.InitiativeBonus, TackleBonus: grade.TackleBonus,
+		TackleEvade: grade.TackleEvade, MaxSummon: grade.MaxSummon,
+		DamageBonuses: mappedElementalDamageBonuses{Air: grade.AirDamageBonus, Earth: grade.EarthDamageBonus,
+			Fire: grade.FireDamageBonus, Water: grade.WaterDamageBonus, Neutral: grade.NeutralDamageBonus},
 	}
 }
 
@@ -773,6 +1099,10 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	achievements, err := readUnityRecords[rawAchievement](dir, "achievements.json", "AchievementData")
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	spellByID := make(map[int]rawSpell, len(spells))
 	for _, value := range spells {
@@ -801,6 +1131,10 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 	breedRoleByID := make(map[int]rawBreedRole, len(breedRoles))
 	for _, value := range breedRoles {
 		breedRoleByID[value.ID] = value
+	}
+	achievementByID := make(map[int]rawAchievement, len(achievements))
+	for _, value := range achievements {
+		achievementByID[value.ID] = value
 	}
 	breedByID := make(map[int]rawBreed, len(breeds))
 	for _, value := range breeds {
@@ -859,7 +1193,7 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 
 	type pendingMonsterSpell struct {
 		SpellID     int
-		GradeRanges []mappedMonsterSpellGrade
+		Assignments []monsterSpellAssignment
 	}
 	monsterRefsBySpell := make(map[int][]mappedNamedReference)
 	monsterSpellLinks := make(map[int][]pendingMonsterSpell, len(monsters))
@@ -875,15 +1209,21 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 				encoded = monster.SpellGrades.Array[index]
 			}
 			if _, found := spellByID[spellID]; found {
+				assignments, err := parseMonsterSpellGrades(encoded)
+				if err != nil {
+					return nil, nil, nil, fmt.Errorf("monster %d spell %d: %w", monster.ID, spellID, err)
+				}
 				monsterSpellLinks[monster.ID] = append(monsterSpellLinks[monster.ID], pendingMonsterSpell{
-					SpellID: spellID, GradeRanges: parseMonsterSpellGrades(encoded),
+					SpellID: spellID, Assignments: assignments,
 				})
 				monsterRefsBySpell[spellID] = append(monsterRefsBySpell[spellID], monsterRef)
 			}
 		}
 		mappedGrades := make([]mappedMonsterGrade, 0, len(monster.Grades.Array))
 		for _, grade := range monster.Grades.Array {
-			mappedGrades = append(mappedGrades, mapMonsterGrade(grade, levelByID, spellByID, languages))
+			mappedGrade := mapMonsterGrade(grade, levelByID, spellByID, languages)
+			mappedGrade.Spells = []mappedSpell{}
+			mappedGrades = append(mappedGrades, mappedGrade)
 		}
 		race := mappedMonsterRace{AnkamaID: monster.RaceID, Name: map[string]string{}, SuperRace: mappedNamedReference{Name: map[string]string{}}}
 		if rawRace, ok := raceByID[monster.RaceID]; ok {
@@ -902,8 +1242,20 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 			if !found {
 				continue
 			}
+			coefficients := make([]mappedSpecificDropCoefficient, 0, len(drop.SpecificCoefficients.Array))
+			for _, coefficient := range drop.SpecificCoefficients.Array {
+				if coefficient.MonsterID != 0 && coefficient.MonsterID != monster.ID {
+					continue
+				}
+				coefficients = append(coefficients, mappedSpecificDropCoefficient{
+					MonsterGrade: coefficient.MonsterGrade, Coefficient: coefficient.DropCoefficient,
+					Condition:           mapping.ParseConditionUnity(coefficient.Criterions, &languages, gameData),
+					ConditionExpression: coefficient.Criterions,
+				})
+			}
 			drops = append(drops, mappedMonsterDrop{
-				Item: namedReference(drop.ObjectID, flexibleInt(item.NameId), true, languages),
+				DropID: drop.DropID,
+				Item:   namedReference(drop.ObjectID, flexibleInt(item.NameId), true, languages),
 				RatesPercent: []mappedGradeRate{
 					{Grade: 1, Percent: drop.PercentDropForGrade1},
 					{Grade: 2, Percent: drop.PercentDropForGrade2},
@@ -911,12 +1263,69 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 					{Grade: 4, Percent: drop.PercentDropForGrade4},
 					{Grade: 5, Percent: drop.PercentDropForGrade5},
 				},
-				HasConditions: drop.Criterions != "",
+				HasConditions:       drop.Criterions != "",
+				Condition:           mapping.ParseConditionUnity(drop.Criterions, &languages, gameData),
+				ConditionExpression: drop.Criterions,
+				Count:               drop.Count, HiddenIfInvalidConditions: drop.HiddenIfInvalid != 0,
+				DisableDropModifier: drop.DisableDropModificator != 0, SpecificCoefficients: coefficients,
 			})
+		}
+		globalDrops := make([]mappedGlobalDrop, 0, len(monster.GlobalDrops.Array))
+		for _, drop := range monster.GlobalDrops.Array {
+			item, found := gameData.Items[drop.ObjectID]
+			if !found {
+				continue
+			}
+			globalDrops = append(globalDrops, mappedGlobalDrop{
+				Item:       namedReference(drop.ObjectID, flexibleInt(item.NameId), true, languages),
+				MinPercent: drop.MinPercent, MaxPercent: drop.MaxPercent,
+				Condition:     mapping.ParseConditionUnity(drop.ReceiverCriterion, &languages, gameData),
+				HasConditions: drop.ReceiverCriterion != "", ConditionExpression: drop.ReceiverCriterion,
+				AlterationID: drop.AlterationID, DisableDropModifier: drop.DisableDropModificator != 0,
+			})
+		}
+		var appearance *mappedClassAppearance
+		if monster.Look != "" {
+			mappedAppearance, err := mapClassAppearance(monster.Look, nil)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("map appearance for monster %d: %w", monster.ID, err)
+			}
+			appearance = &mappedAppearance
+		}
+		var correspondingMiniBoss *mappedNamedReference
+		if rawMiniBoss, found := monsterByID[monster.CorrespondingMiniBossID]; found {
+			ref := namedReference(rawMiniBoss.ID, rawMiniBoss.NameID, true, languages)
+			correspondingMiniBoss = &ref
+		}
+		souls := make([]mappedMonsterSoul, 0, len(monster.Souls.Array))
+		for _, soul := range monster.Souls.Array {
+			item, found := gameData.Items[soul.ObjectID]
+			if !found {
+				continue
+			}
+			souls = append(souls, mappedMonsterSoul{
+				Item:          namedReference(soul.ObjectID, flexibleInt(item.NameId), true, languages),
+				Condition:     mapping.ParseConditionUnity(soul.Criterion, &languages, gameData),
+				HasConditions: soul.Criterion != "", ConditionExpression: soul.Criterion,
+			})
+		}
+		ratios := make([][]float64, 0, len(monster.CharacteristicRatios.Array))
+		for _, ratio := range monster.CharacteristicRatios.Array {
+			ratios = append(ratios, ratio.Values.Array)
+		}
+		achievementRefs := make([]mappedNamedReference, 0, len(monster.Achievements.Array))
+		for _, achievementID := range monster.Achievements.Array {
+			if achievement, found := achievementByID[achievementID]; found {
+				achievementRefs = append(achievementRefs, namedReference(achievement.ID, achievement.NameID, true, languages))
+			}
 		}
 		mappedMonsters = append(mappedMonsters, mappedMonster{
 			AnkamaID: monster.ID, Name: monsterRef.Name, GfxID: monster.GfxID, Race: race,
-			Grades: mappedGrades, Spells: []mappedMonsterSpell{}, SpawnLocations: spawnLocations, Drops: drops,
+			Grades: mappedGrades, SpawnLocations: spawnLocations, Drops: drops, GlobalDrops: globalDrops,
+			Appearance: appearance, CreatureBoneID: monster.CreatureBoneID, IsBounty: monster.IsBounty != 0,
+			CorrespondingMiniBoss: correspondingMiniBoss, SummonCost: monster.SummonCost,
+			SpeedAdjust: monster.SpeedAdjust, ScaleGradeReference: monster.ScaleGradeRef,
+			Achievements: achievementRefs, Souls: souls, CharacteristicRatios: ratios,
 		})
 	}
 
@@ -944,9 +1353,11 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 			monsterRefs = []mappedNamedReference{}
 		}
 		mappedSpells = append(mappedSpells, mappedSpell{
-			AnkamaID: spell.ID, Name: localizedText(spell.NameID, languages),
+			AnkamaID: spell.ID, AdminName: spell.AdminName, Order: spell.Order, Name: localizedText(spell.NameID, languages),
 			Description: localizedText(spell.DescriptionID, languages), Type: mappedType, IconID: spell.IconID,
 			BasePreviewZone: mapZoneDescription(spell.BasePreviewZone), Classes: classes, Monsters: monsterRefs, Levels: levels,
+			Scripts:         mapSpellScripts(spell.BoundScriptUsageData.Array, stateByID, monsterByID, breedByID, languages, gameData),
+			CriticalScripts: mapSpellScripts(spell.CriticalBoundScriptUsageData.Array, stateByID, monsterByID, breedByID, languages, gameData),
 		})
 	}
 
@@ -963,10 +1374,33 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 	}
 	for index := range mappedMonsters {
 		for _, link := range monsterSpellLinks[mappedMonsters[index].AnkamaID] {
-			if spell, found := mappedSpellByID[link.SpellID]; found {
-				mappedMonsters[index].Spells = append(mappedMonsters[index].Spells, mappedMonsterSpell{
-					Spell: spell, GradeRanges: link.GradeRanges,
-				})
+			spell, found := mappedSpellByID[link.SpellID]
+			if !found {
+				continue
+			}
+			for _, assignment := range link.Assignments {
+				if assignment.SpellGrade == 0 {
+					continue
+				}
+				gradeIndex := -1
+				for candidate := range mappedMonsters[index].Grades {
+					if mappedMonsters[index].Grades[candidate].Grade == assignment.MonsterGrade {
+						gradeIndex = candidate
+						break
+					}
+				}
+				if gradeIndex < 0 {
+					return nil, nil, nil, fmt.Errorf("monster %d spell %d refers to missing monster grade %d", mappedMonsters[index].AnkamaID, link.SpellID, assignment.MonsterGrade)
+				}
+				monsterGrade := &mappedMonsters[index].Grades[gradeIndex]
+				if monsterGrade.Level != assignment.MonsterLevel {
+					return nil, nil, nil, fmt.Errorf("monster %d grade %d level is %d, spell assignment says %d", mappedMonsters[index].AnkamaID, assignment.MonsterGrade, monsterGrade.Level, assignment.MonsterLevel)
+				}
+				gradeSpell, available := spellAtResolvedGrade(spell, assignment.SpellGrade)
+				if !available {
+					continue
+				}
+				monsterGrade.Spells = append(monsterGrade.Spells, gradeSpell)
 			}
 		}
 	}

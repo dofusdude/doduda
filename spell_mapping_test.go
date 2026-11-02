@@ -1,10 +1,31 @@
 package main
 
 import (
+	"encoding/json"
 	"testing"
 
 	mapping "github.com/dofusdude/dodumap"
 )
+
+func TestCurrentSpellEffectFieldsUnmarshal(t *testing.T) {
+	var effect rawSpellEffect
+	if err := json.Unmarshal([]byte(`{"actionId":195,"effectUid":42,"targetId":7,"displayZero":1,"modificator":3,"zoneDescr":{"shape":80}}`), &effect); err != nil {
+		t.Fatal(err)
+	}
+	if effect.EffectID != 195 || effect.EffectUID != 42 || effect.TargetID != 7 || effect.DisplayZero != 1 || effect.Modificator != 3 {
+		t.Fatalf("current spell effect fields were not mapped: %#v", effect)
+	}
+}
+
+func TestCurrentMonsterGradeFieldsUnmarshal(t *testing.T) {
+	var grade rawMonsterGrade
+	if err := json.Unmarshal([]byte(`{"xp":2112,"reductionEarth":6,"reductionWater":-9,"paLostDodge":-1,"rangeBonus":2}`), &grade); err != nil {
+		t.Fatal(err)
+	}
+	if grade.GradeXP != 2112 || grade.EarthResistance != 6 || grade.WaterResistance != -9 || grade.PADodge != -1 || grade.BonusRange != 2 {
+		t.Fatalf("current monster grade fields were not mapped: %#v", grade)
+	}
+}
 
 func TestMapStateCriterion(t *testing.T) {
 	languages := map[string]mapping.LangDictUnity{
@@ -38,12 +59,46 @@ func TestMapStateCriterionEmpty(t *testing.T) {
 }
 
 func TestParseMonsterSpellGrades(t *testing.T) {
-	grades := parseMonsterSpellGrades("1,16;2,17;broken")
-	if len(grades) != 2 {
-		t.Fatalf("got %d grade ranges, want 2", len(grades))
+	grades, err := parseMonsterSpellGrades("1,16;2,17")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if grades[1].MonsterGrade != 2 || grades[1].MinSpellGrade != 2 || grades[1].MaxSpellGrade != 17 {
-		t.Fatalf("unexpected second grade range: %#v", grades[1])
+	if len(grades) != 2 {
+		t.Fatalf("got %d grade assignments, want 2", len(grades))
+	}
+	if grades[1].MonsterGrade != 2 || grades[1].SpellGrade != 2 || grades[1].MonsterLevel != 17 {
+		t.Fatalf("unexpected second grade assignment: %#v", grades[1])
+	}
+}
+
+func TestParseMonsterSpellGradesRejectsMalformedValues(t *testing.T) {
+	if _, err := parseMonsterSpellGrades("1,16;broken"); err == nil {
+		t.Fatal("expected malformed assignment to fail")
+	}
+}
+
+func TestParseMonsterSpellGradesSkipsNullPaddedMonsterGrades(t *testing.T) {
+	grades, err := parseMonsterSpellGrades("1,1;1,66;1,132;1,null;1,null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(grades) != 3 || grades[2].MonsterGrade != 3 || grades[2].MonsterLevel != 132 {
+		t.Fatalf("unexpected assignments: %#v", grades)
+	}
+}
+
+func TestSpellAtResolvedGradeUsesExactGradeAndClampsLegacyValues(t *testing.T) {
+	spell := mappedSpell{AnkamaID: 861, Levels: []mappedSpellLevel{{Grade: 1}, {Grade: 2}, {Grade: 3}}}
+	exact, ok := spellAtResolvedGrade(spell, 2)
+	if !ok || len(exact.Levels) != 1 || exact.Levels[0].Grade != 2 {
+		t.Fatalf("exact grade was not selected: %#v", exact.Levels)
+	}
+	clamped, ok := spellAtResolvedGrade(spell, 6)
+	if !ok || len(clamped.Levels) != 1 || clamped.Levels[0].Grade != 3 {
+		t.Fatalf("legacy grade was not clamped: %#v", clamped.Levels)
+	}
+	if _, ok := spellAtResolvedGrade(spell, 0); ok {
+		t.Fatal("grade zero must mean unavailable")
 	}
 }
 
