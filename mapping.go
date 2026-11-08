@@ -329,12 +329,31 @@ func Map(dir string, indent string, persistenceDir string, release string, headl
 			os.Exit(1)
 		}
 
+		updatesChan <- "World areas, spells, classes and monsters 🧠"
+		mappedSuperAreas, mappedAreas, mappedSubareas, spawnByMonster, err := MapWorldAreasUnity(tmpDir, languageData)
+		if err != nil {
+			log.Fatal(err)
+		}
+		mappedClasses, mappedMonsters, mappedSpells, err := MapSpellEntitiesUnity(tmpDir, gameData, languageData, spawnByMonster)
+		if err != nil {
+			log.Fatal(err)
+		}
+		marshalSave(mappedSuperAreas, filepath.Join(dir, "MAPPED_SUPER_AREAS.json"), indent)
+		marshalSave(mappedAreas, filepath.Join(dir, "MAPPED_AREAS.json"), indent)
+		marshalSave(mappedSubareas, filepath.Join(dir, "MAPPED_SUBAREAS.json"), indent)
+		marshalSave(mappedClasses, filepath.Join(dir, "MAPPED_CLASSES.json"), indent)
+		marshalSave(mappedMonsters, filepath.Join(dir, "MAPPED_MONSTERS.json"), indent)
+		marshalSave(mappedSpells, filepath.Join(dir, "MAPPED_SPELLS.json"), indent)
+
 		if headless {
 			updatesChan <- "Items 🧠"
 		} else {
 			updatesChan <- "Items " + ui.HelpStyle("mapping")
 		}
-		mappedItems := mapping.MapItemsUnity(gameData, &languageData)
+		mappedItems, err := MapItemZonesUnity(tmpDir, mapping.MapItemsUnity(gameData, &languageData))
+		if err != nil {
+			log.Fatal(err)
+		}
 		mappedItemPath := filepath.Join(dir, "MAPPED_ITEMS.json")
 		marshalSave(mappedItems, mappedItemPath, indent)
 

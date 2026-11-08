@@ -63,8 +63,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/dofusdude/ankabuffer v0.1.0 h1:yMLJu3iN0JBjBS/Hjh/VtwUHwUJSGx4rEixt9+28+HE=
 github.com/dofusdude/ankabuffer v0.1.0/go.mod h1:H84vCl3zg8ibH+h6mFGvYxrLEIBOpnjYVi3WJXBFbNg=
-github.com/dofusdude/dodumap v0.8.1 h1:SAh8ftuZJXsSRymkvKC4Uv+WB+vcnRyy3yF2aGwuBx4=
-github.com/dofusdude/dodumap v0.8.1/go.mod h1:LGWx+vdMvD+EpG2PkYp+zeUKLnDSrdKJegOCqfGr5mo=
+github.com/dofusdude/dodumap v0.9.0 h1:q6jo2Kp+FFGbjbzMM9ms+lqIEa9quEE4KQ3+fr4td3Y=
+github.com/dofusdude/dodumap v0.9.0/go.mod h1:LGWx+vdMvD+EpG2PkYp+zeUKLnDSrdKJegOCqfGr5mo=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeORc=
