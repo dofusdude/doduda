@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -128,20 +127,9 @@ func DownloadMountImageWorker(manifest *ankabuffer.Manifest, bin int, fragment s
 }
 
 func GetLatestLauncherVersion(release string) (string, error) {
-	versionResponse, err := http.Get("https://cytrus.cdn.ankama.com/cytrus.json")
+	versionBody, err := downloadCDN("https://cytrus.cdn.ankama.com/cytrus.json")
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch cytrus.json: %w", err)
-	}
-	defer versionResponse.Body.Close()
-
-	// Check HTTP status code
-	if versionResponse.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("cytrus.json returned HTTP %d", versionResponse.StatusCode)
-	}
-
-	versionBody, err := io.ReadAll(versionResponse.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read cytrus.json response: %w", err)
 	}
 
 	var versionJson map[string]any
@@ -209,16 +197,9 @@ func CreateDataDirectoryStructure(dir string) {
 
 func GetReleaseManifest(version string, gameVersionType string, platform string, dir string) ([]byte, error) {
 	gameHashesUrl := fmt.Sprintf("https://cytrus.cdn.ankama.com/dofus/releases/%s/%s/%s.manifest", gameVersionType, platform, version)
-	hashResponse, err := http.Get(gameHashesUrl)
+	hashBody, err := downloadCDN(gameHashesUrl)
 	if err != nil {
-		log.Fatal("Could not get manifest file", err)
-		return nil, err
-	}
-
-	hashBody, err := io.ReadAll(hashResponse.Body)
-	if err != nil {
-		log.Fatal("Could not read response body of manifest file", err)
-		return nil, err
+		return nil, fmt.Errorf("could not download manifest: %w", err)
 	}
 
 	return hashBody, nil
@@ -494,22 +475,7 @@ func Download(releaseChannel string, version string, dir string, clean bool, ful
 
 func DownloadBundle(bundleHash string) ([]byte, error) {
 	url := fmt.Sprintf("https://cytrus.cdn.ankama.com/dofus/bundles/%s/%s", bundleHash[0:2], bundleHash)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("bundle %s status %d", bundleHash, resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
+	return downloadCDN(url)
 }
 
 // TODO category not used anymore

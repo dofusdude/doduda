@@ -24,9 +24,20 @@ jobs:
           chmod +x doduda
           ./doduda --version
       - name: Run and Update
+        env:
+          GAME_RELEASE: ${{ github.event.inputs.release }}
         run: |
-          ./doduda --headless --ignore 'images-*' --release ${{ github.event.inputs.release }}
-          ./doduda map --headless --persistence-dir persistent --release ${{ github.event.inputs.release }}
+          # The published CLI may predate its built-in CDN retries.
+          for attempt in 1 2 3 4; do
+            if ./doduda --headless --ignore 'images-*' --release "$GAME_RELEASE"; then
+              break
+            fi
+            if [ "$attempt" -eq 4 ]; then
+              exit 1
+            fi
+            sleep "$((attempt * 10))"
+          done
+          ./doduda map --headless --persistence-dir persistent --release "$GAME_RELEASE"
           git config --global user.name 'stelzo'
           git config --global user.email 'stelzo@users.noreply.github.com'
           git add persistent

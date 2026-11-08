@@ -59,6 +59,7 @@ func DownloadItems(hashJson *ankabuffer.Manifest, bin int, version int, dir stri
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_npcmessagesdataroot.asset.bundle", FriendlyName: "npc_messages.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_infomessagesdataroot.asset.bundle", FriendlyName: "info_messages.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_calendareventsdataroot.asset.bundle", FriendlyName: "event_calendar.asset.bundle"},
+			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_worldeventsdataroot.asset.bundle", FriendlyName: "world_events.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_randomdropgroupsdataroot.asset.bundle", FriendlyName: "random_drop_groups.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_alignmentranksdataroot.asset.bundle", FriendlyName: "alignment_ranks.asset.bundle"},
 			{Filename: "Dofus_Data/StreamingAssets/Content/Data/data_assets_alignmentsidesdataroot.asset.bundle", FriendlyName: "alignment_sides.asset.bundle"},

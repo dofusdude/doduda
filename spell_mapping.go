@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -428,35 +427,28 @@ type mappedSpellType struct {
 	LongName  map[string]string `json:"long_name"`
 }
 
-type mappedStateCriterion struct {
-	Raw                string            `json:"raw"`
-	Templated          map[string]string `json:"templated"`
-	StateIDs           []int             `json:"state_ids"`
-	UnresolvedStateIDs []int             `json:"unresolved_state_ids"`
-}
-
 type mappedSpellLevel struct {
-	AnkamaID               int                   `json:"ankama_id"`
-	Grade                  int                   `json:"grade"`
-	APCost                 int                   `json:"ap_cost"`
-	MinRange               int                   `json:"min_range"`
-	MaxRange               int                   `json:"max_range"`
-	CriticalHitProbability int                   `json:"critical_hit_probability"`
-	MaxStack               int                   `json:"max_stack"`
-	MaxCastPerTurn         int                   `json:"max_cast_per_turn"`
-	MaxCastPerTarget       int                   `json:"max_cast_per_target"`
-	MaxGlobalCastPerTurn   int                   `json:"max_global_cast_per_turn"`
-	MaxGlobalCastPerTarget int                   `json:"max_global_cast_per_target"`
-	MinCastInterval        int                   `json:"min_cast_interval"`
-	InitialCooldown        int                   `json:"initial_cooldown"`
-	GlobalCooldown         int                   `json:"global_cooldown"`
-	MinPlayerLevel         int                   `json:"min_player_level"`
-	IgnorePrisonGlyph      bool                  `json:"ignore_prison_glyph"`
-	SpellBreed             int                   `json:"spell_breed"`
-	StatesCriterion        *mappedStateCriterion `json:"states_criterion"`
-	PreviewZones           []mappedPreviewZone   `json:"preview_zones"`
-	Effects                []mappedSpellEffect   `json:"effects"`
-	CriticalEffects        []mappedSpellEffect   `json:"critical_effects"`
+	AnkamaID               int                              `json:"ankama_id"`
+	Grade                  int                              `json:"grade"`
+	APCost                 int                              `json:"ap_cost"`
+	MinRange               int                              `json:"min_range"`
+	MaxRange               int                              `json:"max_range"`
+	CriticalHitProbability int                              `json:"critical_hit_probability"`
+	MaxStack               int                              `json:"max_stack"`
+	MaxCastPerTurn         int                              `json:"max_cast_per_turn"`
+	MaxCastPerTarget       int                              `json:"max_cast_per_target"`
+	MaxGlobalCastPerTurn   int                              `json:"max_global_cast_per_turn"`
+	MaxGlobalCastPerTarget int                              `json:"max_global_cast_per_target"`
+	MinCastInterval        int                              `json:"min_cast_interval"`
+	InitialCooldown        int                              `json:"initial_cooldown"`
+	GlobalCooldown         int                              `json:"global_cooldown"`
+	MinPlayerLevel         int                              `json:"min_player_level"`
+	IgnorePrisonGlyph      bool                             `json:"ignore_prison_glyph"`
+	SpellBreed             int                              `json:"spell_breed"`
+	StatesCriterion        *mapping.ConditionTreeNodeMapped `json:"states_criterion"`
+	PreviewZones           []mappedPreviewZone              `json:"preview_zones"`
+	Effects                []mappedSpellEffect              `json:"effects"`
+	CriticalEffects        []mappedSpellEffect              `json:"critical_effects"`
 }
 
 type mappedPreviewZone struct {
@@ -796,64 +788,6 @@ func namedReference(id int, nameID flexibleInt, resolved bool, languages map[str
 	return mappedNamedReference{AnkamaID: id, Name: name}
 }
 
-var stateCriterionToken = regexp.MustCompile(`HS([=!])(\d+)`)
-
-type stateCriterionWords struct{ Has, HasNot, And, Or string }
-
-var stateCriterionTranslations = map[string]stateCriterionWords{
-	"de": {"hat den Zustand %s", "hat nicht den Zustand %s", " und ", " oder "},
-	"en": {"has state %s", "does not have state %s", " and ", " or "},
-	"es": {"tiene el estado %s", "no tiene el estado %s", " y ", " o "},
-	"fr": {"a l'état %s", "n'a pas l'état %s", " et ", " ou "},
-	"pt": {"tem o estado %s", "não tem o estado %s", " e ", " ou "},
-}
-
-func mapStateCriterion(raw string, states map[int]rawSpellState, languages map[string]mapping.LangDictUnity) *mappedStateCriterion {
-	if raw == "" {
-		return nil
-	}
-	found := stateCriterionToken.FindAllStringSubmatch(raw, -1)
-	stateIDs := make([]int, 0, len(found))
-	unresolved := make([]int, 0)
-	seen, missing := map[int]bool{}, map[int]bool{}
-	for _, token := range found {
-		id, _ := strconv.Atoi(token[2])
-		if !seen[id] {
-			stateIDs = append(stateIDs, id)
-			seen[id] = true
-		}
-		if _, ok := states[id]; !ok && !missing[id] {
-			unresolved = append(unresolved, id)
-			missing[id] = true
-		}
-	}
-	templated := make(map[string]string, len(languages))
-	for language := range languages {
-		words, ok := stateCriterionTranslations[language]
-		if !ok {
-			words = stateCriterionTranslations["en"]
-		}
-		value := stateCriterionToken.ReplaceAllStringFunc(raw, func(token string) string {
-			parts := stateCriterionToken.FindStringSubmatch(token)
-			id, _ := strconv.Atoi(parts[2])
-			name := strconv.Itoa(id)
-			if state, ok := states[id]; ok {
-				if localized := localizedText(state.NameID, languages)[language]; localized != "" {
-					name = localized
-				}
-			}
-			if parts[1] == "=" {
-				return fmt.Sprintf(words.Has, name)
-			}
-			return fmt.Sprintf(words.HasNot, name)
-		})
-		value = strings.ReplaceAll(value, "&", words.And)
-		value = strings.ReplaceAll(value, "|", words.Or)
-		templated[language] = value
-	}
-	return &mappedStateCriterion{Raw: raw, Templated: templated, StateIDs: stateIDs, UnresolvedStateIDs: unresolved}
-}
-
 func mapSpellLevel(level rawSpellLevel, states map[int]rawSpellState, monsters map[int]rawMonster, breeds map[int]rawBreed, spells map[int]rawSpell, gameData *mapping.JSONGameDataUnity, languages *map[string]mapping.LangDictUnity) mappedSpellLevel {
 	return mappedSpellLevel{
 		AnkamaID: level.ID, Grade: level.Grade, APCost: level.APCost,
@@ -864,7 +798,7 @@ func mapSpellLevel(level rawSpellLevel, states map[int]rawSpellState, monsters m
 		MinCastInterval: level.MinCastInterval, InitialCooldown: level.InitialCooldown,
 		GlobalCooldown: level.GlobalCooldown, MinPlayerLevel: level.MinPlayerLevel,
 		IgnorePrisonGlyph: level.IgnorePrisonGlyph != 0, SpellBreed: level.SpellBreed,
-		StatesCriterion: mapStateCriterion(level.StatesCriterion, states, *languages),
+		StatesCriterion: mapping.ParseConditionUnity(level.StatesCriterion, languages, gameData),
 		PreviewZones:    mapPreviewZones(level.PreviewZones.Array, states, monsters, breeds, *languages),
 		Effects:         mapSpellEffects(gameData, level.Effects.Array, states, monsters, breeds, spells, languages),
 		CriticalEffects: mapSpellEffects(gameData, level.CriticalEffects.Array, states, monsters, breeds, spells, languages),
@@ -1063,6 +997,10 @@ func mapMonsterGrade(grade rawMonsterGrade, levels map[int]rawSpellLevel, spells
 }
 
 func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, languages map[string]mapping.LangDictUnity, spawnByMonster map[int][]mappedSpawnLocation) ([]mappedClass, []mappedMonster, []mappedSpell, error) {
+	err := loadConditionReferences(dir, gameData, languages)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	breeds, err := readUnityRecords[rawBreed](dir, "breeds.json", "BreedData")
 	if err != nil {
 		return nil, nil, nil, err

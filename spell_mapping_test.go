@@ -27,34 +27,31 @@ func TestCurrentMonsterGradeFieldsUnmarshal(t *testing.T) {
 	}
 }
 
-func TestMapStateCriterion(t *testing.T) {
-	languages := map[string]mapping.LangDictUnity{
-		"en": {Texts: map[int]string{100: "Rooted", 101: "Invulnerable"}},
-		"fr": {Texts: map[int]string{100: "Enraciné", 101: "Invulnérable"}},
-	}
-	states := map[int]rawSpellState{
-		7: {ID: 7, NameID: 100},
-		8: {ID: 8, NameID: 101},
-	}
-
-	criterion := mapStateCriterion("HS=7&HS!8|HS=999", states, languages)
-	if criterion == nil {
-		t.Fatal("expected a mapped criterion")
-	}
-	if got, want := criterion.Templated["en"], "has state Rooted and does not have state Invulnerable or has state 999"; got != want {
-		t.Fatalf("English criterion = %q, want %q", got, want)
-	}
-	if len(criterion.StateIDs) != 3 || criterion.StateIDs[0] != 7 || criterion.StateIDs[1] != 8 || criterion.StateIDs[2] != 999 {
-		t.Fatalf("state IDs were not retained in encounter order: %v", criterion.StateIDs)
-	}
-	if len(criterion.UnresolvedStateIDs) != 1 || criterion.UnresolvedStateIDs[0] != 999 {
-		t.Fatalf("unexpected unresolved states: %v", criterion.UnresolvedStateIDs)
-	}
-}
-
-func TestMapStateCriterionEmpty(t *testing.T) {
-	if criterion := mapStateCriterion("", nil, nil); criterion != nil {
-		t.Fatalf("empty criterion should map to null, got %#v", criterion)
+func TestSpellLevelUsesSharedConditionParser(t *testing.T) {
+	languages := map[string]mapping.LangDictUnity{"en": {Texts: map[int]string{}}}
+	data := &mapping.JSONGameDataUnity{ConditionReferences: map[string]map[int]mapping.ConditionReference{
+		"HS": {
+			7: {AnkamaID: 7, Name: map[string]string{"en": "Rooted"}},
+			8: {AnkamaID: 8, Name: map[string]string{"en": "Invulnerable"}},
+		},
+	}}
+	for _, raw := range []string{"HS=7&HS!8", ""} {
+		level := mapSpellLevel(rawSpellLevel{StatesCriterion: raw}, nil, nil, nil, nil, data, &languages)
+		want := mapping.ParseConditionUnity(raw, &languages, data)
+		gotJSON, err := json.Marshal(level.StatesCriterion)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantJSON, err := json.Marshal(want)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(gotJSON) != string(wantJSON) {
+			t.Fatalf("spell criterion differs from shared parser: %s != %s", gotJSON, wantJSON)
+		}
+		if raw != "" && level.StatesCriterion == nil {
+			t.Fatal("spell condition disappeared")
+		}
 	}
 }
 
