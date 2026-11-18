@@ -281,5 +281,7 @@
     ": + cast per turn",
     "Changes the strike element to at a rate of%",
     "Resets the effects of a weapon whose level is equal to or less than",
-    "Assigns the starting spell:"
+    "Assigns the starting spell:",
+    "Transcended: prevents the use of smithmagic runes and transcendence runes",
+    "Experience x% (excluding arenas) ( minute)"
 ]
