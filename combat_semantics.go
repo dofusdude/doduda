@@ -17,7 +17,14 @@ type mappedCombatCondition struct {
 	Operator      string                `json:"operator,omitempty"`
 	ReferenceType string                `json:"reference_type,omitempty"`
 	Value         *int                  `json:"value,omitempty"`
+	Values        []int                 `json:"values,omitempty"`
 	Reference     *mappedNamedReference `json:"reference,omitempty"`
+	Comparison    *mappedComparison     `json:"comparison,omitempty"`
+}
+
+type mappedComparison struct {
+	Operator string `json:"operator"`
+	Value    int    `json:"value"`
 }
 
 type mappedTargetMask struct {
@@ -89,16 +96,43 @@ var targetConditionNames = map[string]targetConditionDefinition{
 	"Atq": {"attack_team", "fighters on the scenario attack team", "equals", ""},
 	"Def": {"defense_team", "fighters on the scenario defense team", "equals", ""},
 	"Sce": {"scenario_entities", "entities controlled by the fight scenario", "equals", ""},
+	// Introduced with Dofus 3.8 beta. Exact game semantics are not confirmed yet.
+	"Ct":  {"spell_counter", "counter tracked for the referenced spell compared against a value", "", "spell"},
+	"HCH": {"hch_is", "target matches the specified HCH value", "equals", ""},
+	"hch": {"hch_is_not", "target does not match the specified HCH value", "not_equals", ""},
+	"ICH": {"ich_is", "target matches the specified ICH value", "equals", ""},
+	"ich": {"ich_is_not", "target does not match the specified ICH value", "not_equals", ""},
 }
 
-var targetTokenPattern = regexp.MustCompile(`^([A-Za-z]+?)(-?\d+)?$`)
+// prefix, then an optional single value or {a,b,...} set, then an optional comparison (Ct33276<3).
+var targetTokenPattern = regexp.MustCompile(`^([A-Za-z]+?)(?:(-?\d+)|\{(-?\d+(?:,-?\d+)*)\})?(?:(<=|>=|=|<|>)(-?\d+))?$`)
+
+// splitTargetMask splits on commas that are not inside a {...} value set.
+func splitTargetMask(raw string) []string {
+	tokens := []string{}
+	depth, start := 0, 0
+	for i, r := range raw {
+		switch r {
+		case '{':
+			depth++
+		case '}':
+			depth--
+		case ',':
+			if depth == 0 {
+				tokens = append(tokens, raw[start:i])
+				start = i + 1
+			}
+		}
+	}
+	return append(tokens, raw[start:])
+}
 
 func mapTargetMask(raw string, states map[int]rawSpellState, monsters map[int]rawMonster, breeds map[int]rawBreed, languages map[string]mapping.LangDictUnity) mappedTargetMask {
 	result := mappedTargetMask{Raw: raw, Logic: "selector_matches_and_all_conditions_match", Selectors: []mappedCombatCondition{}, Conditions: []mappedCombatCondition{}}
 	if raw == "" {
 		return result
 	}
-	for _, encoded := range strings.Split(raw, ",") {
+	for _, encoded := range splitTargetMask(raw) {
 		subject := "target"
 		if strings.HasPrefix(encoded, "*") {
 			subject = "caster"
@@ -123,6 +157,22 @@ func mapTargetMask(raw string, states map[int]rawSpellState, monsters map[int]ra
 			condition.Value = &value
 			condition.Reference = targetReference(definition.ReferenceKind, value, states, monsters, breeds, languages)
 		}
+		if matches[3] != "" {
+			for _, part := range strings.Split(matches[3], ",") {
+				value, _ := strconv.Atoi(part)
+				condition.Values = append(condition.Values, value)
+			}
+			switch condition.Operator {
+			case "equals":
+				condition.Operator = "in"
+			case "not_equals":
+				condition.Operator = "not_in"
+			}
+		}
+		if matches[4] != "" {
+			value, _ := strconv.Atoi(matches[5])
+			condition.Comparison = &mappedComparison{Operator: comparisonOperatorName(matches[4]), Value: value}
+		}
 		result.Conditions = append(result.Conditions, condition)
 	}
 	return result
@@ -139,6 +189,8 @@ func targetReference(kind string, id int, states map[int]rawSpellState, monsters
 	case "breed":
 		breed, ok := breeds[id]
 		return pointerToNamedReference(namedReference(id, breed.ShortNameID, ok, languages))
+	case "spell":
+		return pointerToNamedReference(namedReference(id, 0, false, languages))
 	default:
 		return nil
 	}
@@ -212,9 +264,14 @@ var triggerNames = map[string][2]string{
 	"CPD": {"caster_pushes", "caster pushes a fighter"}, "CPT": {"caster_attracts", "caster attracts a fighter"},
 	"P": {"position_changed", "target's position changes"}, "SREF": {"reflected_spell", "a spell is reflected"},
 	"TR": {"spell_triggered", "the specified spell is triggered"}, "X": {"other_fighter_died", "another fighter dies"},
+	// Introduced with Dofus 3.8 beta. Exact game semantics are not confirmed yet.
+	"CTI": {"spell_counter_increased", "the counter of the specified spell increases"},
+	"CTD": {"spell_counter_decreased", "the counter of the specified spell decreases"},
+	"NWS": {"nws", "NWS event (meaning not confirmed yet)"},
 }
 
-var parameterizedTrigger = regexp.MustCompile(`^(EACT|EON|EOFF|TR)(\d+)$`)
+var parameterizedTrigger = regexp.MustCompile(`^(EACT|EON|EOFF|TR|CTI|CTD)(\d+)$`)
+var spellCounterTrigger = regexp.MustCompile(`^CTT(\d+)(<=|>=|=|<|>)(-?\d+)$`)
 var effectCountTrigger = regexp.MustCompile(`^EC:(<=|>=|=|<|>)(\d+):(.+)$`)
 
 func mapTriggers(raw string, states map[int]rawSpellState, monsters map[int]rawMonster, breeds map[int]rawBreed, spells map[int]rawSpell, languages map[string]mapping.LangDictUnity) mappedTriggers {
@@ -230,6 +287,18 @@ func mapTriggers(raw string, states map[int]rawSpellState, monsters map[int]rawM
 				Code: code, Name: "matching_fighter_count",
 				Description: "the number of fighters matching the target mask satisfies the comparison",
 				Subject:     "fight", Operator: comparisonOperatorName(matches[1]), Parameter: &count, TargetMask: &mask,
+			})
+			continue
+		}
+		if matches := spellCounterTrigger.FindStringSubmatch(code); len(matches) != 0 {
+			spellID, _ := strconv.Atoi(matches[1])
+			threshold, _ := strconv.Atoi(matches[3])
+			spell, found := spells[spellID]
+			result.Events = append(result.Events, mappedTrigger{
+				Code: code, Name: "spell_counter_threshold",
+				Description: "the counter of the specified spell satisfies the comparison",
+				Operator:    comparisonOperatorName(matches[2]), Parameter: &threshold,
+				Reference: pointerToNamedReference(namedReference(spellID, spell.NameID, found, languages)),
 			})
 			continue
 		}
@@ -263,7 +332,7 @@ func mapTriggers(raw string, states map[int]rawSpellState, monsters map[int]rawM
 			case "EACT", "EON", "EOFF":
 				state, found := states[*parameter]
 				reference = pointerToNamedReference(namedReference(*parameter, state.NameID, found, languages))
-			case "TR":
+			case "TR", "CTI", "CTD":
 				spell, found := spells[*parameter]
 				reference = pointerToNamedReference(namedReference(*parameter, spell.NameID, found, languages))
 			}

@@ -101,7 +101,7 @@ func TestSpellAtResolvedGradeUsesExactGradeAndClampsLegacyValues(t *testing.T) {
 
 func TestParseRawZone(t *testing.T) {
 	zone := parseRawZone("X1,0,10,1")
-	if zone.Shape.Code != "X" || zone.Shape.Name != "diagonal_cross" {
+	if zone.Shape.Code != "X" || zone.Shape.Name != "cross" {
 		t.Fatalf("unexpected parsed shape: %#v", zone.Shape)
 	}
 	if zone.Size == nil || *zone.Size != 1 || zone.MinSize == nil || *zone.MinSize != 0 {
@@ -196,5 +196,40 @@ func TestMapTriggersResolvesMatchingFighterCount(t *testing.T) {
 	}
 	if event.TargetMask == nil || len(event.TargetMask.Selectors) != 2 {
 		t.Fatalf("embedded target mask was not decoded: %#v", event.TargetMask)
+	}
+}
+
+func TestMapTargetMaskParsesSetsAndComparisons(t *testing.T) {
+	mask := mapTargetMask("a,A,HCH{11,12,13},*Ct33276<3,ich11,F50000", nil, nil, nil, map[string]mapping.LangDictUnity{})
+	if len(mask.Selectors) != 2 || len(mask.Conditions) != 4 {
+		t.Fatalf("unexpected split: %#v", mask)
+	}
+	set := mask.Conditions[0]
+	if set.Name != "hch_is" || set.Operator != "in" || len(set.Values) != 3 || set.Values[2] != 13 {
+		t.Fatalf("unexpected set condition: %#v", set)
+	}
+	counter := mask.Conditions[1]
+	if counter.Subject != "caster" || counter.Reference == nil || counter.Reference.AnkamaID != 33276 ||
+		counter.Comparison == nil || counter.Comparison.Operator != "less_than" || counter.Comparison.Value != 3 {
+		t.Fatalf("unexpected counter condition: %#v", counter)
+	}
+	if mask.Conditions[2].Operator != "not_equals" || *mask.Conditions[2].Value != 11 {
+		t.Fatalf("unexpected negated condition: %#v", mask.Conditions[2])
+	}
+}
+
+func TestMapTriggersParsesSpellCounters(t *testing.T) {
+	languages := map[string]mapping.LangDictUnity{"en": {Texts: map[int]string{300: "Charge"}}}
+	spells := map[int]rawSpell{33276: {ID: 33276, NameID: 300}}
+	triggers := mapTriggers("I|CTI33276|CTT33276>0|NWS", nil, nil, nil, spells, languages)
+	if len(triggers.Events) != 4 {
+		t.Fatalf("unexpected events: %#v", triggers.Events)
+	}
+	if triggers.Events[1].Name != "spell_counter_increased" || triggers.Events[1].Reference.Name["en"] != "Charge" {
+		t.Fatalf("unexpected counter trigger: %#v", triggers.Events[1])
+	}
+	threshold := triggers.Events[2]
+	if threshold.Operator != "greater_than" || *threshold.Parameter != 0 || threshold.Reference.AnkamaID != 33276 {
+		t.Fatalf("unexpected threshold trigger: %#v", threshold)
 	}
 }

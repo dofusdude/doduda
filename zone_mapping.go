@@ -77,17 +77,18 @@ func effectiveZoneSize(code string, size int, minSize int) (*int, *int) {
 	}
 }
 
-// Complete spell-area alphabet used by the current Unity client. The names
-// follow the client's SpellZone behavior classes and UI localization keys.
+// Complete spell-area alphabet used by the current Unity client. Names follow
+// the client's SpellZoneShape enum (checked against the 3.8 global-metadata.dat).
 var zoneShapeNames = map[string]string{
 	"":  "empty",
-	"#": "cross_without_center",
+	" ": "empty",
+	"#": "diagonal_cross_without_center",
 	"*": "star",
-	"+": "plus",
-	"-": "perpendicular_line",
+	"+": "diagonal_cross",
+	"-": "diagonal_perpendicular_line",
 	"/": "diagonal_line",
 	";": "custom_cells",
-	"A": "whole_map",
+	"A": "whole_map_with_the_dead",
 	"B": "boomerang",
 	"C": "circle",
 	"D": "checkerboard",
@@ -95,17 +96,19 @@ var zoneShapeNames = map[string]string{
 	"G": "square",
 	"I": "outside_circle",
 	"L": "line",
+	"N": "regular",
 	"O": "ring",
 	"P": "point",
-	"Q": "diagonal_cross_without_center",
+	"Q": "cross_without_center",
 	"R": "rectangle",
 	"T": "perpendicular_line",
 	"U": "half_circle",
 	"V": "cone",
 	"W": "square_without_diagonals",
-	"X": "diagonal_cross",
+	"X": "cross",
 	"Z": "outside_complex_circle",
 	"a": "whole_map",
+	"c": "relative",
 	"l": "line_from_caster",
 }
 
