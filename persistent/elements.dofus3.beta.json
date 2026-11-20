@@ -283,5 +283,8 @@
     "Resets the effects of a weapon whose level is equal to or less than",
     "Assigns the starting spell:",
     "Transcended: prevents the use of smithmagic runes and transcendence runes",
-    "Experience x% (excluding arenas) ( minute)"
+    "Experience x% (excluding arenas) ( minute)",
+    "[!] Transformation des caractéristiques élémentaires offensives vers la Puissance",
+    "[!] Transformation des caractéristiques défensives d'un élément vers l'élément",
+    "[!] Transformation des caractéristiques offensives d'un élément vers l'élément"
 ]
