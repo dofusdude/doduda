@@ -1,11 +1,11 @@
 module github.com/dofusdude/doduda
 
-go 1.26.0
+go 1.26.7
 
 require (
 	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.0.10
-	charm.land/lipgloss/v2 v2.0.6
+	charm.land/lipgloss/v2 v2.1.0
 	charm.land/log/v2 v2.0.1
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/docker/docker v28.5.2+incompatible
