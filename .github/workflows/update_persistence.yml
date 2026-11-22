@@ -38,6 +38,14 @@ jobs:
             sleep "$((attempt * 10))"
           done
           ./doduda map --headless --persistence-dir persistent --release "$GAME_RELEASE"
+          # Dofus 3 main and beta share one ID space: both files hold the same list,
+          # so the same name has the same ID in both releases. Mirror this run's file.
+          if [[ "$GAME_RELEASE" == "beta" ]]; then src=beta; dst=main; else src=main; dst=beta; fi
+          for kind in elements item_types; do
+            if [ -f "persistent/$kind.dofus3.$src.json" ]; then
+              cp "persistent/$kind.dofus3.$src.json" "persistent/$kind.dofus3.$dst.json"
+            fi
+          done
           git config --global user.name 'stelzo'
           git config --global user.email 'stelzo@users.noreply.github.com'
           git add persistent
