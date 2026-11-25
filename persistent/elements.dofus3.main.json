@@ -531,5 +531,6 @@
     "Disables an aura",
     "Changes an aura's area of effect",
     "Critical Failures",
-    "Removes an aura"
+    "Removes an aura",
+    "[!] Ajoute un niveau dans la lignée courante"
 ]
