@@ -205,31 +205,52 @@ func TestMapTargetMaskParsesSetsAndComparisons(t *testing.T) {
 		t.Fatalf("unexpected split: %#v", mask)
 	}
 	set := mask.Conditions[0]
-	if set.Name != "hch_is" || set.Operator != "in" || len(set.Values) != 3 || set.Values[2] != 13 {
-		t.Fatalf("unexpected set condition: %#v", set)
+	if set.Code != "HCH{11,12,13}" || set.Name != "" || set.Operator != "" || len(set.Values) != 3 || set.Values[2] != 13 {
+		t.Fatalf("unconfirmed set condition must be code and values only: %#v", set)
 	}
 	counter := mask.Conditions[1]
-	if counter.Subject != "caster" || counter.Reference == nil || counter.Reference.AnkamaID != 33276 ||
+	if counter.Subject != "caster" || counter.Name != "" || counter.Reference != nil || counter.Value == nil || *counter.Value != 33276 ||
 		counter.Comparison == nil || counter.Comparison.Operator != "less_than" || counter.Comparison.Value != 3 {
-		t.Fatalf("unexpected counter condition: %#v", counter)
+		t.Fatalf("unconfirmed counter condition must be code, value and comparison only: %#v", counter)
 	}
-	if mask.Conditions[2].Operator != "not_equals" || *mask.Conditions[2].Value != 11 {
-		t.Fatalf("unexpected negated condition: %#v", mask.Conditions[2])
+	if mask.Conditions[2].Name != "" || mask.Conditions[2].Operator != "" || *mask.Conditions[2].Value != 11 {
+		t.Fatalf("unexpected unconfirmed condition: %#v", mask.Conditions[2])
+	}
+	if mask.Conditions[3].Name != "monster_is" {
+		t.Fatalf("confirmed condition lost its name: %#v", mask.Conditions[3])
 	}
 }
 
 func TestMapTriggersParsesSpellCounters(t *testing.T) {
-	languages := map[string]mapping.LangDictUnity{"en": {Texts: map[int]string{300: "Charge"}}}
-	spells := map[int]rawSpell{33276: {ID: 33276, NameID: 300}}
-	triggers := mapTriggers("I|CTI33276|CTT33276>0|NWS", nil, nil, nil, spells, languages)
-	if len(triggers.Events) != 4 {
+	triggers := mapTriggers("I|CTI33276|CTT33276>0|NWS", nil, nil, nil, nil, map[string]mapping.LangDictUnity{})
+	if len(triggers.Events) != 4 || triggers.Events[0].Name != "immediate" {
 		t.Fatalf("unexpected events: %#v", triggers.Events)
 	}
-	if triggers.Events[1].Name != "spell_counter_increased" || triggers.Events[1].Reference.Name["en"] != "Charge" {
-		t.Fatalf("unexpected counter trigger: %#v", triggers.Events[1])
+	if e := triggers.Events[1]; e.Code != "CTI33276" || e.Name != "" || e.Subject != "" || e.Reference != nil || *e.Parameter != 33276 {
+		t.Fatalf("unconfirmed trigger must be code and parameter only: %#v", e)
 	}
-	threshold := triggers.Events[2]
-	if threshold.Operator != "greater_than" || *threshold.Parameter != 0 || threshold.Reference.AnkamaID != 33276 {
-		t.Fatalf("unexpected threshold trigger: %#v", threshold)
+	if e := triggers.Events[2]; e.Name != "" || *e.Parameter != 33276 || e.Comparison == nil || e.Comparison.Operator != "greater_than" || e.Comparison.Value != 0 {
+		t.Fatalf("unexpected threshold trigger: %#v", e)
+	}
+	if e := triggers.Events[3]; e.Code != "NWS" || e.Name != "" || e.Parameter != nil {
+		t.Fatalf("unexpected NWS trigger: %#v", e)
+	}
+}
+
+func TestMapTargetMaskParsesAtFlag(t *testing.T) {
+	mask := mapTargetMask("C,at", nil, nil, nil, map[string]mapping.LangDictUnity{})
+	if len(mask.Selectors) != 1 || len(mask.Conditions) != 1 || mask.Conditions[0].Code != "at" || mask.Conditions[0].Name != "" || mask.Conditions[0].Value != nil {
+		t.Fatalf("unexpected at mask: %#v", mask)
+	}
+}
+
+func TestMonsterDropRatesSupportsBothFormats(t *testing.T) {
+	legacy := monsterDropRates(rawMonsterDrop{PercentDropForGrade1: 10, PercentDropForGrade5: 50})
+	if len(legacy) != 5 || legacy[0].Percent != 10 || legacy[4].Grade != 5 || legacy[4].Percent != 50 {
+		t.Fatalf("unexpected legacy rates: %#v", legacy)
+	}
+	current := monsterDropRates(rawMonsterDrop{PercentDropsForGrades: unityArray[float64]{Array: []float64{1, 2, 3, 4, 5}}})
+	if len(current) != 5 || current[0].Percent != 1 || current[4].Grade != 5 || current[4].Percent != 5 {
+		t.Fatalf("unexpected array rates: %#v", current)
 	}
 }

@@ -11,8 +11,8 @@ import (
 
 type mappedCombatCondition struct {
 	Code          string                `json:"code"`
-	Name          string                `json:"name"`
-	Description   string                `json:"description"`
+	Name          string                `json:"name,omitempty"`
+	Description   string                `json:"description,omitempty"`
 	Subject       string                `json:"subject,omitempty"`
 	Operator      string                `json:"operator,omitempty"`
 	ReferenceType string                `json:"reference_type,omitempty"`
@@ -96,12 +96,10 @@ var targetConditionNames = map[string]targetConditionDefinition{
 	"Atq": {"attack_team", "fighters on the scenario attack team", "equals", ""},
 	"Def": {"defense_team", "fighters on the scenario defense team", "equals", ""},
 	"Sce": {"scenario_entities", "entities controlled by the fight scenario", "equals", ""},
-	// Introduced with Dofus 3.8 beta. Exact game semantics are not confirmed yet.
-	"Ct":  {"spell_counter", "counter tracked for the referenced spell compared against a value", "", "spell"},
-	"HCH": {"hch_is", "target matches the specified HCH value", "equals", ""},
-	"hch": {"hch_is_not", "target does not match the specified HCH value", "not_equals", ""},
-	"ICH": {"ich_is", "target matches the specified ICH value", "equals", ""},
-	"ich": {"ich_is_not", "target does not match the specified ICH value", "not_equals", ""},
+	// Codes whose meaning is not confirmed are published with their code, values
+	// and comparison only. A name and description are added once the meaning is
+	// known, so names never have to change. (3.8: Ct, HCH, hch, ICH, ich; 3.8.5: at)
+	"Ct": {}, "HCH": {}, "hch": {}, "ICH": {}, "ich": {}, "at": {},
 }
 
 // prefix, then an optional single value or {a,b,...} set, then an optional comparison (Ct33276<3).
@@ -189,8 +187,6 @@ func targetReference(kind string, id int, states map[int]rawSpellState, monsters
 	case "breed":
 		breed, ok := breeds[id]
 		return pointerToNamedReference(namedReference(id, breed.ShortNameID, ok, languages))
-	case "spell":
-		return pointerToNamedReference(namedReference(id, 0, false, languages))
 	default:
 		return nil
 	}
@@ -200,11 +196,12 @@ func pointerToNamedReference(value mappedNamedReference) *mappedNamedReference {
 
 type mappedTrigger struct {
 	Code        string                `json:"code"`
-	Name        string                `json:"name"`
-	Description string                `json:"description"`
+	Name        string                `json:"name,omitempty"`
+	Description string                `json:"description,omitempty"`
 	Subject     string                `json:"subject,omitempty"`
 	Operator    string                `json:"operator,omitempty"`
 	Parameter   *int                  `json:"parameter,omitempty"`
+	Comparison  *mappedComparison     `json:"comparison,omitempty"`
 	Reference   *mappedNamedReference `json:"reference,omitempty"`
 	TargetMask  *mappedTargetMask     `json:"target_mask,omitempty"`
 }
@@ -264,10 +261,8 @@ var triggerNames = map[string][2]string{
 	"CPD": {"caster_pushes", "caster pushes a fighter"}, "CPT": {"caster_attracts", "caster attracts a fighter"},
 	"P": {"position_changed", "target's position changes"}, "SREF": {"reflected_spell", "a spell is reflected"},
 	"TR": {"spell_triggered", "the specified spell is triggered"}, "X": {"other_fighter_died", "another fighter dies"},
-	// Introduced with Dofus 3.8 beta. Exact game semantics are not confirmed yet.
-	"CTI": {"spell_counter_increased", "the counter of the specified spell increases"},
-	"CTD": {"spell_counter_decreased", "the counter of the specified spell decreases"},
-	"NWS": {"nws", "NWS event (meaning not confirmed yet)"},
+	// Not confirmed yet (3.8): published as code and parameter only, see targetConditionNames.
+	"CTI": {}, "CTD": {}, "NWS": {},
 }
 
 var parameterizedTrigger = regexp.MustCompile(`^(EACT|EON|EOFF|TR|CTI|CTD)(\d+)$`)
@@ -291,14 +286,12 @@ func mapTriggers(raw string, states map[int]rawSpellState, monsters map[int]rawM
 			continue
 		}
 		if matches := spellCounterTrigger.FindStringSubmatch(code); len(matches) != 0 {
-			spellID, _ := strconv.Atoi(matches[1])
-			threshold, _ := strconv.Atoi(matches[3])
-			spell, found := spells[spellID]
+			// CTT<n><op><value>: meaning not confirmed yet, so code, parameter and comparison only.
+			parameter, _ := strconv.Atoi(matches[1])
+			value, _ := strconv.Atoi(matches[3])
 			result.Events = append(result.Events, mappedTrigger{
-				Code: code, Name: "spell_counter_threshold",
-				Description: "the counter of the specified spell satisfies the comparison",
-				Operator:    comparisonOperatorName(matches[2]), Parameter: &threshold,
-				Reference: pointerToNamedReference(namedReference(spellID, spell.NameID, found, languages)),
+				Code: code, Parameter: &parameter,
+				Comparison: &mappedComparison{Operator: comparisonOperatorName(matches[2]), Value: value},
 			})
 			continue
 		}
@@ -332,12 +325,16 @@ func mapTriggers(raw string, states map[int]rawSpellState, monsters map[int]rawM
 			case "EACT", "EON", "EOFF":
 				state, found := states[*parameter]
 				reference = pointerToNamedReference(namedReference(*parameter, state.NameID, found, languages))
-			case "TR", "CTI", "CTD":
+			case "TR":
 				spell, found := spells[*parameter]
 				reference = pointerToNamedReference(namedReference(*parameter, spell.NameID, found, languages))
 			}
 		}
 		name, description := definition[0], definition[1]
+		if name == "" { // meaning not confirmed yet: code and parameter only
+			result.Events = append(result.Events, mappedTrigger{Code: code, Parameter: parameter})
+			continue
+		}
 		if subject == "other_fighter" {
 			name = "other_fighter_" + name
 			description = strings.Replace(description, "target", "another fighter", 1)

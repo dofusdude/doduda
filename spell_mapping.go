@@ -234,6 +234,7 @@ type rawMonsterDrop struct {
 	PercentDropForGrade3   float64                                `json:"percentDropForGrade3"`
 	PercentDropForGrade4   float64                                `json:"percentDropForGrade4"`
 	PercentDropForGrade5   float64                                `json:"percentDropForGrade5"`
+	PercentDropsForGrades  unityArray[float64]                    `json:"percentDropsForGrades"` // replaces the five fields above since 3.8.5
 	Criterions             string                                 `json:"criterions"`
 	HiddenIfInvalid        int                                    `json:"hiddenIfInvalidCriterions"`
 	DisableDropModificator int                                    `json:"disableDropModificator"`
@@ -1192,15 +1193,9 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 				})
 			}
 			drops = append(drops, mappedMonsterDrop{
-				DropID: drop.DropID,
-				Item:   namedReference(drop.ObjectID, flexibleInt(item.NameId), true, languages),
-				RatesPercent: []mappedGradeRate{
-					{Grade: 1, Percent: drop.PercentDropForGrade1},
-					{Grade: 2, Percent: drop.PercentDropForGrade2},
-					{Grade: 3, Percent: drop.PercentDropForGrade3},
-					{Grade: 4, Percent: drop.PercentDropForGrade4},
-					{Grade: 5, Percent: drop.PercentDropForGrade5},
-				},
+				DropID:              drop.DropID,
+				Item:                namedReference(drop.ObjectID, flexibleInt(item.NameId), true, languages),
+				RatesPercent:        monsterDropRates(drop),
 				HasConditions:       drop.Criterions != "",
 				Condition:           mapping.ParseConditionUnity(drop.Criterions, &languages, gameData),
 				ConditionExpression: drop.Criterions,
@@ -1343,4 +1338,18 @@ func MapSpellEntitiesUnity(dir string, gameData *mapping.JSONGameDataUnity, lang
 		}
 	}
 	return mappedClasses, mappedMonsters, mappedSpells, nil
+}
+
+// monsterDropRates returns the drop rate per grade, from the percentDropsForGrades
+// array (3.8.5+) or the older percentDropForGrade1..5 fields.
+func monsterDropRates(drop rawMonsterDrop) []mappedGradeRate {
+	percents := []float64{drop.PercentDropForGrade1, drop.PercentDropForGrade2, drop.PercentDropForGrade3, drop.PercentDropForGrade4, drop.PercentDropForGrade5}
+	if len(drop.PercentDropsForGrades.Array) > 0 {
+		percents = drop.PercentDropsForGrades.Array
+	}
+	rates := make([]mappedGradeRate, 0, len(percents))
+	for index, percent := range percents {
+		rates = append(rates, mappedGradeRate{Grade: index + 1, Percent: percent})
+	}
+	return rates
 }
